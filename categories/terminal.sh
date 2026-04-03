@@ -3,17 +3,19 @@ CAT_ID="terminal"
 CAT_TITLE="Terminal"
 CAT_ICON="🖥️"
 CAT_DESC="Emuladores, multiplexer e prompt"
-CAT_APPS="alacritty tmux starship fzf"
+CAT_APPS="alacritty tmux starship fzf fastfetch"
 
 name_alacritty() { echo "Alacritty"; }
 name_tmux()      { echo "Tmux + TPM"; }
 name_starship()  { echo "Starship"; }
 name_fzf()       { echo "fzf"; }
+name_fastfetch() { echo "Fastfetch"; }
 
 desc_alacritty() { echo "Terminal GPU-acelerado com tema Noctalia"; }
 desc_tmux()      { echo "Multiplexer com tema Nord e suporte a mouse"; }
 desc_starship()  { echo "Prompt minimalista com ícones Nerd Font"; }
 desc_fzf()       { echo "Fuzzy finder interativo para terminal"; }
+desc_fastfetch() { echo "Informações do sistema estilizadas"; }
 
 install_alacritty() {
     step "Instalando Alacritty..."
@@ -95,4 +97,10 @@ remove_fzf() {
     remove_pkg fzf
     rm -f "$HOME/.config/fish/conf.d/fzf.fish"
     log "fzf removido."
+}
+
+remove_fastfetch() {
+    remove_pkg fastfetch
+    rm -rf "$HOME/.config/fastfetch"
+    log "Fastfetch removido."
 }

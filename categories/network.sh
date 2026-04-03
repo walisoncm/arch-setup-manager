@@ -2,8 +2,8 @@
 CAT_ID="network"
 CAT_TITLE="Rede"
 CAT_ICON="🌐"
-CAT_DESC="VPN, firewall e conectividade"
-CAT_APPS="proton-vpn-gtk-app kdeconnect com.freerdp.FreeRDP ufw"
+CAT_DESC="VPN, firewall, conectividade e compartilhamento"
+CAT_APPS="proton-vpn-gtk-app kdeconnect com.freerdp.FreeRDP ufw rustdesk-bin org.localsend.localsend_app"
 
 name_proton-vpn-gtk-app()  { echo "ProtonVPN"; }
 name_kdeconnect()           { echo "KDE Connect"; }
@@ -68,3 +68,9 @@ remove_ufw() {
     remove_pkg ufw
     log "UFW removido."
 }
+
+name_rustdesk-bin()                { echo "RustDesk"; }
+name_org_localsend_localsend_app() { echo "LocalSend"; }
+
+desc_rustdesk-bin()                { echo "Desktop remoto open-source"; }
+desc_org_localsend_localsend_app() { echo "Envio de arquivos via rede local"; }

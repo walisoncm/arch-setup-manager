@@ -3,17 +3,19 @@ CAT_ID="system"
 CAT_TITLE="Sistema"
 CAT_ICON="⚙️"
 CAT_DESC="Utilitários e otimizações"
-CAT_APPS="earlyoom flatpak fwupd shelly"
+CAT_APPS="earlyoom flatpak fwupd shelly btop"
 
 name_earlyoom() { echo "EarlyOOM"; }
 name_flatpak()  { echo "Flatpak + Flathub"; }
 name_fwupd()    { echo "fwupd (Firmware Updates)"; }
 name_shelly()   { echo "Shelly"; }
+name_btop()     { echo "Btop"; }
 
 desc_earlyoom() { echo "Evita travamentos por falta de RAM"; }
 desc_flatpak()  { echo "Suporte a apps universais"; }
 desc_fwupd()    { echo "Atualização de BIOS e Hardware"; }
 desc_shelly()   { echo "Gerenciador de pacotes Arch moderno"; }
+desc_btop()     { echo "Monitor de recursos interativo"; }
 
 # svc_enabled verifica setup completo, não só o pacote
 status_earlyoom() { has_pkg "earlyoom" && svc_enabled "earlyoom.service"; }
@@ -152,4 +154,10 @@ remove_fwupd() {
     sudo systemctl disable --now fwupd-refresh.timer fwupd.service 2>/dev/null
     remove_pkg fwupd
     log "fwupd removido."
+}
+
+remove_btop() {
+    remove_pkg btop
+    rm -rf "$HOME/.config/btop"
+    log "Btop removido."
 }
