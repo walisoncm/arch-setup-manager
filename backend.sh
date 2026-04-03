@@ -5,29 +5,45 @@ source "./lib/helpers.sh"
 
 # ─── ARRAYS GLOBAIS ───────────────────────────────────────────────────────────
 declare -A CATS_TITLE CATS_ICON CATS_APPS CATS_DESC
+declare -A APP_NAMES APP_DESCS
 CATEGORIES=()
 
 # ─── CARREGAMENTO DINÂMICO ────────────────────────────────────────────────────
-# Procura por arquivos .sh dentro da pasta 'categories'
+# Cada categoria é uma pasta dentro de 'categories/':
+#   category.sh  → metadados da categoria (CAT_ID, CAT_TITLE, CAT_ICON, CAT_DESC)
+#   *.sh         → um arquivo por app (APP_ID, APP_NAME, APP_DESC + funções opcionais)
 MOD_PATH="./categories"
 
 if [[ -d "$MOD_PATH" ]]; then
-    for module in "$MOD_PATH"/*.sh; do
-        if [[ -f "$module" ]]; then
-            # Carrega o arquivo da categoria
-            source "$module"
-            
-            # As variáveis abaixo devem ser definidas dentro de cada arquivo de categoria
-            if [[ -n "$CAT_ID" ]]; then
-                CATEGORIES+=("$CAT_ID")
-                CATS_TITLE[$CAT_ID]="$CAT_TITLE"
-                CATS_ICON[$CAT_ID]="$CAT_ICON"
-                CATS_DESC[$CAT_ID]="$CAT_DESC"
-                CATS_APPS[$CAT_ID]="$CAT_APPS"
-                
-                # Limpa as variáveis para o próximo loop não herdar lixo
-                unset CAT_ID CAT_TITLE CAT_ICON CAT_DESC CAT_APPS
-            fi
+    for cat_dir in "$MOD_PATH"/*/; do
+        [[ -f "${cat_dir}category.sh" ]] || continue
+
+        source "${cat_dir}category.sh"
+
+        if [[ -n "$CAT_ID" ]]; then
+            CATEGORIES+=("$CAT_ID")
+            CATS_TITLE[$CAT_ID]="$CAT_TITLE"
+            CATS_ICON[$CAT_ID]="$CAT_ICON"
+            CATS_DESC[$CAT_ID]="$CAT_DESC"
+            unset CAT_ID CAT_TITLE CAT_ICON CAT_DESC
+
+            _cat_apps=""
+            for app_file in "${cat_dir}"*.sh; do
+                [[ "$(basename "$app_file")" == "category.sh" ]] && continue
+                [[ -f "$app_file" ]] || continue
+
+                source "$app_file"
+
+                if [[ -n "$APP_ID" ]]; then
+                    _cat_apps+=" $APP_ID"
+                    APP_NAMES[$APP_ID]="$APP_NAME"
+                    APP_DESCS[$APP_ID]="$APP_DESC"
+                    unset APP_ID APP_NAME APP_DESC
+                fi
+            done
+
+            CATS_APPS[${CATEGORIES[-1]}]="${_cat_apps# }"
+            unset _cat_apps
         fi
     done
 else
@@ -44,8 +60,27 @@ count_installed() {
     echo "$installed $total"
 }
 
-name_app() { echo "$( "name_${1//./_}" 2>/dev/null || echo "$1" )"; }
-desc_app() { echo "$( "desc_${1//./_}" 2>/dev/null || echo "" )"; }
+name_app() {
+    local app_id="$1" norm="${1//./_}"
+    if declare -f "name_$norm" > /dev/null; then
+        "name_$norm"
+    elif [[ -n "${APP_NAMES[$app_id]+x}" ]]; then
+        echo "${APP_NAMES[$app_id]}"
+    else
+        echo "$app_id"
+    fi
+}
+
+desc_app() {
+    local app_id="$1" norm="${1//./_}"
+    if declare -f "desc_$norm" > /dev/null; then
+        "desc_$norm"
+    elif [[ -n "${APP_DESCS[$app_id]+x}" ]]; then
+        echo "${APP_DESCS[$app_id]}"
+    else
+        echo ""
+    fi
+}
 
 status_app() {
     local app_id="$1"
