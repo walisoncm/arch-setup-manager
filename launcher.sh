@@ -6,7 +6,7 @@
 # =============================================================================
 [[ "$EUID" -eq 0 ]] && echo "Não execute como root." && exit 1
 
-APP_DIR="."
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ ! -d "$APP_DIR" ]]; then
     echo "Erro: diretório do app não encontrado em $APP_DIR"
