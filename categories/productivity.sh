@@ -13,34 +13,14 @@ desc_obsidian()  { echo "Editor de notas em Markdown com vault local"; }
 desc_btop()      { echo "Monitor de recursos interativo"; }
 desc_fastfetch() { echo "Informações do sistema estilizadas"; }
 
-install_obsidian() {
-    step "Instalando Obsidian..."
-    sudo pacman -S --needed --noconfirm obsidian
-    log "Obsidian instalado."
-}
-remove_obsidian() {
-    sudo pacman -R --noconfirm obsidian 2>/dev/null || true
-    log "Obsidian removido."
-}
-
-install_btop() {
-    step "Instalando Btop..."
-    sudo pacman -S --needed --noconfirm btop
-    log "Btop instalado."
-}
 remove_btop() {
-    sudo pacman -R --noconfirm btop 2>/dev/null || true
+    remove_pkg btop
     rm -rf "$HOME/.config/btop"
     log "Btop removido."
 }
 
-install_fastfetch() {
-    step "Instalando Fastfetch..."
-    sudo pacman -S --needed --noconfirm fastfetch
-    log "Fastfetch instalado."
-}
 remove_fastfetch() {
-    sudo pacman -R --noconfirm fastfetch 2>/dev/null || true
+    remove_pkg fastfetch
     rm -rf "$HOME/.config/fastfetch"
     log "Fastfetch removido."
 }

@@ -23,7 +23,7 @@ desc_bruno-bin()              { echo "API client open-source (alternativa ao Ins
 
 install_cuda() {
     step "Instalando CUDA..."
-    sudo pacman -S --needed --noconfirm cuda cudnn
+    install_pkg cuda cudnn
 
     step "Configurando PATH..."
     mkdir -p "$HOME/.config/fish/conf.d"
@@ -43,7 +43,7 @@ EOF
     log "CUDA instalado e PATH configurado."
 }
 remove_cuda() {
-    sudo pacman -R --noconfirm cuda cudnn 2>/dev/null || true
+    remove_pkg cuda cudnn
     rm -f "$HOME/.config/fish/conf.d/cuda.fish" "$HOME/.config/cuda_env.sh"
     for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do [[ -f "$rc" ]] && sed -i '/cuda_env\.sh/d' "$rc"; done
     log "CUDA removido."
@@ -51,7 +51,7 @@ remove_cuda() {
 
 install_neovim() {
     step "Instalando Neovim e dependências..."
-    sudo pacman -S --needed --noconfirm neovim ripgrep fd lazygit luarocks tree-sitter-cli
+    install_pkg neovim ripgrep fd lazygit luarocks tree-sitter-cli
 
     step "Aplicando configuração pessoal..."
     if [[ -d "$HOME/.config/nvim" ]]; then
@@ -64,53 +64,25 @@ install_neovim() {
     log "Neovim instalado. Plugins serão instalados no primeiro acesso."
 }
 remove_neovim() {
-    sudo pacman -R --noconfirm neovim 2>/dev/null || true
+    remove_pkg neovim
     rm -rf "$HOME/.config/nvim" "$HOME/.local/share/nvim" "$HOME/.cache/nvim"
     log "Neovim e dados removidos."
 }
 
-install_pgadmin4-desktop-bin() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
-    step "Instalando pgAdmin 4 Desktop..."
-    $AUR -S --needed --noconfirm pgadmin4-desktop-bin
-    log "pgAdmin 4 instalado."
-}
 remove_pgadmin4-desktop-bin() {
-    $AUR -R --noconfirm pgadmin4-desktop-bin 2>/dev/null || true
+    remove_pkg pgadmin4-desktop-bin
     rm -rf "$HOME/.pgadmin" "$HOME/.config/pgadmin"
     log "pgAdmin 4 removido."
 }
 
-install_rest_insomnia_Insomnia() {
-    step "Instalando Insomnia..."
-    sudo flatpak install --noninteractive flathub rest.insomnia.Insomnia
-    log "Insomnia instalado."
-}
-remove_rest_insomnia_Insomnia() {
-    sudo flatpak uninstall --noninteractive rest.insomnia.Insomnia 2>/dev/null || true
-    log "Insomnia removido."
-}
-
-install_nvm-fish() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
-    step "Instalando NVM para Fish..."
-    $AUR -S --needed --noconfirm nvm-fish
-    log "NVM instalado. Use 'nvm install <versão>' para instalar o Node."
-}
 remove_nvm-fish() {
-    $AUR -R --noconfirm nvm-fish 2>/dev/null || true
+    remove_pkg nvm-fish
     rm -rf "$HOME/.nvm"
     log "NVM removido."
 }
 
-install_bruno-bin() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
-    step "Instalando Bruno..."
-    $AUR -S --needed --noconfirm bruno-bin
-    log "Bruno instalado."
-}
 remove_bruno-bin() {
-    $AUR -R --noconfirm bruno-bin 2>/dev/null || true
+    remove_pkg bruno-bin
     rm -rf "$HOME/.config/bruno"
     log "Bruno removido."
 }

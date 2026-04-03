@@ -17,7 +17,7 @@ install_damx() {
     headers="${ksuf:+linux-${ksuf}-headers}"; [[ -z "$headers" ]] && headers="linux-headers"
     
     step "Instalando dependências..."
-    sudo pacman -S --needed --noconfirm base-devel "$headers" clang llvm dkms acpi_call-dkms
+    install_pkg base-devel "$headers" clang llvm dkms acpi_call-dkms
     
     for kver in $(ls /lib/modules/); do
         local ks kpkg
@@ -27,7 +27,7 @@ install_damx() {
     done
     
     step "Instalando pacotes AUR..."
-    $AUR -S --needed --noconfirm acer-wmi-battery-dkms-git linuwu-sense-dkms
+    install_pkg acer-wmi-battery-dkms-git linuwu-sense-dkms
     
     step "Configurando blacklist..."
     sudo tee /etc/modprobe.d/acer-blacklist.conf > /dev/null <<'EOF'
@@ -100,8 +100,7 @@ remove_damx() {
     sudo dkms remove --all linuwu-sense 2>/dev/null || true
     
     step "Removendo pacotes..."
-    $AUR -R --noconfirm acer-wmi-battery-dkms-git linuwu-sense-dkms 2>/dev/null || true
-    sudo pacman -R --noconfirm acpi_call-dkms 2>/dev/null || true
+    remove_pkg acer-wmi-battery-dkms-git linuwu-sense-dkms acpi_call-dkms
     
     step "Removendo arquivos DAMX..."
     sudo rm -f /usr/local/bin/damx /usr/local/bin/damx-daemon

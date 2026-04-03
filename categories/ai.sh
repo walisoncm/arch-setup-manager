@@ -12,11 +12,13 @@ desc_ollama()    { echo "IA Local com aceleração GPU"; }
 desc_open-webui() { echo "Interface web para Ollama (chat, modelos, histórico)"; }
 
 status_ollama()    { has_cmd "ollama"; }
-status_open-webui() { has_pkg "open-webui" && svc_enabled "open-webui.service"; }
+launch_open-webui() { echo "http://localhost:11500"; }
+
+status_open-webui() { has_cmd "docker" && docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^open-webui$"; }
 
 install_ollama() {
     step "Instalando Ollama..."
-    if ! sudo pacman -S --needed --noconfirm ollama 2>/dev/null; then
+    if ! install_pkg ollama 2>/dev/null; then
         curl -fsSL https://ollama.ai/install.sh | sh
     fi
     sudo systemctl enable --now ollama.service 2>/dev/null || true
@@ -24,39 +26,57 @@ install_ollama() {
 }
 remove_ollama() {
     sudo systemctl stop ollama.service 2>/dev/null || true
-    sudo pacman -R --noconfirm ollama 2>/dev/null || true
+    remove_pkg ollama
     log "Ollama removido."
 }
 
 install_open-webui() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
-
-    # open-webui requer 'nodejs' que conflita com nodejs-lts-*
-    # Como o usuário usa nvm-fish, o pacote sistema de nodejs-lts pode ser substituído com segurança
-    local lts_pkg=""
-    for candidate in nodejs-lts-krypton nodejs-lts-iron nodejs-lts-hydrogen nodejs-lts-fermium nodejs-lts-gallium; do
-        if has_pkg "$candidate"; then
-            lts_pkg="$candidate"
-            break
-        fi
-    done
-
-    if [[ -n "$lts_pkg" ]]; then
-        warn "Conflito detectado: $lts_pkg ↔ nodejs. Substituindo (nvm-fish não depende do pacote sistema)..."
-        sudo pacman -R --noconfirm "$lts_pkg" || { err "Não foi possível remover $lts_pkg."; return 1; }
+    step "Verificando Docker..."
+    if ! has_cmd "docker"; then
+        install_app docker || { err "Falha ao instalar Docker."; return 1; }
     fi
+    sudo systemctl enable --now docker.service || { err "Falha ao iniciar docker.service."; return 1; }
 
-    step "Instalando Open WebUI..."
-    $AUR -S --needed --noconfirm open-webui || { err "Falha ao instalar open-webui."; return 1; }
+    step "Baixando imagem Open WebUI..."
+    sudo docker pull ghcr.io/open-webui/open-webui:main || { err "Falha ao baixar a imagem."; return 1; }
 
-    step "Habilitando serviço..."
-    sudo systemctl enable --now open-webui.service || { err "Falha ao habilitar open-webui.service."; return 1; }
+    step "Iniciando container Open WebUI..."
+    sudo docker stop open-webui 2>/dev/null || true
+    sudo docker rm   open-webui 2>/dev/null || true
+    sudo docker run -d \
+        --name open-webui \
+        --restart always \
+        -p 11500:8080 \
+        -v open-webui:/app/backend/data \
+        --add-host=host.docker.internal:host-gateway \
+        ghcr.io/open-webui/open-webui:main || { err "Falha ao iniciar o container."; return 1; }
 
-    log "Open WebUI instalado! Acesse em http://localhost:8080"
+    step "Criando lançador no sistema..."
+    mkdir -p "$HOME/.local/share/applications"
+    cat > "$HOME/.local/share/applications/open-webui.desktop" << 'DESKTOP'
+[Desktop Entry]
+Name=Open WebUI
+Comment=Interface web para Ollama (chat, modelos, histórico)
+Exec=xdg-open http://localhost:11500
+Icon=internet-web-browser
+Terminal=false
+Type=Application
+Categories=Network;Utility;
+DESKTOP
+
+    log "Open WebUI instalado! Acesse em http://localhost:11500"
 }
 remove_open-webui() {
-    sudo systemctl stop open-webui.service 2>/dev/null || true
-    sudo systemctl disable open-webui.service 2>/dev/null || true
-    $AUR -R --noconfirm open-webui 2>/dev/null || true
+    step "Parando e removendo container..."
+    sudo docker stop open-webui 2>/dev/null || true
+    sudo docker rm   open-webui 2>/dev/null || true
+
+    step "Removendo imagem e volume Docker..."
+    sudo docker rmi ghcr.io/open-webui/open-webui:main 2>/dev/null || true
+    sudo docker volume rm open-webui 2>/dev/null || true
+
+    step "Removendo lançador..."
+    rm -f "$HOME/.local/share/applications/open-webui.desktop"
+
     log "Open WebUI removido."
 }

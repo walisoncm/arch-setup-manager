@@ -46,14 +46,19 @@ cat << HTML
     </div>
   </div>
 
-  <div class="terminal-container">
+  <div id="terminal-placeholder">
+    <button id="btn-show-terminal">▶ Mostrar console</button>
+  </div>
+
+  <div class="terminal-container" id="terminal-container">
     <div class="terminal-header">
       <div class="dots">
-        <span class="dot red"></span>
-        <span class="dot yellow"></span>
-        <span class="dot green"></span>
+        <span class="dot red"    id="btn-close"    title="Fechar"></span>
+        <span class="dot yellow" id="btn-minimize" title="Minimizar"></span>
+        <span class="dot green"  id="btn-maximize" title="Maximizar"></span>
       </div>
       <span class="terminal-title">Console Output</span>
+      <button id="btn-copy" title="Copiar tudo"><span style="line-height:0;vertical-align:middle">⎘</span></button>
     </div>
     <div id="terminal-output"></div>
     <div class="stdin-area">
@@ -146,9 +151,54 @@ cat << HTML
     border-bottom: 1px solid #333;
   }
   .dots { display: flex; gap: 6px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; cursor: pointer; transition: filter 0.15s; }
+  .dot:hover { filter: brightness(1.35); }
   .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
   .terminal-title { color: #888; font-family: monospace; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+  #btn-copy {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    border-radius: 4px;
+    padding: 4px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  #btn-copy:hover { color: #dcdcdc; border-color: #888; }
+  #btn-copy.copied { color: #99c794; border-color: #99c794; }
+
+  #terminal-placeholder {
+    display: none;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+  }
+  #btn-show-terminal {
+    background: transparent;
+    border: 1px dashed #444;
+    color: #666;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-size: 12px;
+    font-family: monospace;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #btn-show-terminal:hover { color: #aaa; border-color: #888; }
+
+  /* Estado maximizado: ocupa toda a viewport */
+  .terminal-container.maximized {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    border-radius: 0;
+    margin: 0;
+  }
 
   #terminal-output {
     width: 100%;
@@ -228,6 +278,7 @@ window.addEventListener('pageshow', function(e) {
   var LOG_URL   = '${bbv_base}/execute\$./log-tail.sh ${app}';
   var RUN_URL   = '${bbv_base}/execute\$./run.sh ${action} ${app} ${cat_key}';
   var STDIN_URL = '${bbv_base}/execute\$./stdin-relay.sh ${app}';
+  var KILL_URL  = '${bbv_base}/execute\$./kill.sh ${app}';
   var terminal  = document.getElementById('terminal-output');
   var stdinInput = document.getElementById('stdin-input');
   var stdinSend  = document.getElementById('stdin-send');
@@ -295,6 +346,71 @@ window.addEventListener('pageshow', function(e) {
     terminal.insertAdjacentHTML('beforeend', html);
     terminal.scrollTop = terminal.scrollHeight;
   }
+
+  // ── Botões do terminal ────────────────────────────────────────────────────
+  var termContainer = document.getElementById('terminal-container');
+
+  document.getElementById('btn-close').addEventListener('click', function() {
+    fetch(KILL_URL).catch(function() {});
+  });
+
+  var termPlaceholder = document.getElementById('terminal-placeholder');
+
+  function setMinimized(on) {
+    if (on) {
+      if (termContainer.classList.contains('maximized')) termContainer.classList.remove('maximized');
+      termContainer.style.display = 'none';
+      termPlaceholder.style.display = 'flex';
+    } else {
+      termContainer.style.display = '';
+      termPlaceholder.style.display = 'none';
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  document.getElementById('btn-minimize').addEventListener('click', function() {
+    setMinimized(true);
+  });
+
+  document.getElementById('btn-show-terminal').addEventListener('click', function() {
+    setMinimized(false);
+  });
+
+  document.getElementById('btn-maximize').addEventListener('click', function() {
+    termContainer.classList.toggle('maximized');
+    if (termContainer.classList.contains('minimized')) {
+      termContainer.classList.remove('minimized');
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', function() {
+    var btn = this;
+    var text = terminal.innerText || terminal.textContent || '';
+
+    function onCopied() {
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.innerHTML = '<span style="line-height:0;vertical-align:middle">⎘</span>'; btn.classList.remove('copied'); }, 2000);
+    }
+
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { if (document.execCommand('copy')) onCopied(); } catch(e) {}
+      document.body.removeChild(ta);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onCopied).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  });
 
   function onProcessComplete(success) {
     clearInterval(pollTimer);

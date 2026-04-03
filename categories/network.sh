@@ -18,20 +18,15 @@ desc_ufw()                  { echo "Firewall simples com regras básicas"; }
 # svc_enabled verifica setup completo
 status_ufw() { has_pkg "ufw" && svc_enabled "ufw.service"; }
 
-install_proton-vpn-gtk-app() {
-    step "Instalando ProtonVPN..."
-    sudo pacman -S --needed --noconfirm proton-vpn-gtk-app
-    log "ProtonVPN instalado."
-}
 remove_proton-vpn-gtk-app() {
-    sudo pacman -R --noconfirm proton-vpn-gtk-app 2>/dev/null || true
+    remove_pkg proton-vpn-gtk-app
     rm -rf "$HOME/.config/protonvpn"
     log "ProtonVPN removido."
 }
 
 install_kdeconnect() {
     step "Instalando KDE Connect..."
-    sudo pacman -S --needed --noconfirm kdeconnect
+    install_pkg kdeconnect
 
     step "Abrindo porta no firewall..."
     if has_pkg "ufw"; then
@@ -43,7 +38,7 @@ install_kdeconnect() {
     warn "Emparelhe o dispositivo via app KDE Connect no smartphone."
 }
 remove_kdeconnect() {
-    sudo pacman -R --noconfirm kdeconnect 2>/dev/null || true
+    remove_pkg kdeconnect
     if has_pkg "ufw"; then
         sudo ufw delete allow 1714:1764/udp 2>/dev/null || true
         sudo ufw delete allow 1714:1764/tcp 2>/dev/null || true
@@ -51,19 +46,9 @@ remove_kdeconnect() {
     log "KDE Connect removido."
 }
 
-install_com_freerdp_FreeRDP() {
-    step "Instalando FreeRDP..."
-    sudo flatpak install --noninteractive flathub com.freerdp.FreeRDP
-    log "FreeRDP instalado."
-}
-remove_com_freerdp_FreeRDP() {
-    sudo flatpak uninstall --noninteractive com.freerdp.FreeRDP 2>/dev/null || true
-    log "FreeRDP removido."
-}
-
 install_ufw() {
     step "Instalando UFW..."
-    sudo pacman -S --needed --noconfirm ufw
+    install_pkg ufw
 
     step "Configurando regras básicas..."
     sudo ufw default deny incoming
@@ -80,6 +65,6 @@ remove_ufw() {
     sudo ufw --force disable 2>/dev/null || true
     sudo systemctl stop ufw.service 2>/dev/null || true
     sudo systemctl disable ufw.service 2>/dev/null || true
-    sudo pacman -R --noconfirm ufw 2>/dev/null || true
+    remove_pkg ufw
     log "UFW removido."
 }

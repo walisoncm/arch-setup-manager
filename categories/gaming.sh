@@ -29,7 +29,7 @@ desc_lutris()                      { echo "Launcher de jogos com scripts de inst
 
 install_gamemode() {
     step "Instalando GameMode..."
-    sudo pacman -S --needed --noconfirm gamemode lib32-gamemode
+    install_pkg gamemode lib32-gamemode
     step "Adicionando ao grupo..."
     sudo usermod -aG gamemode "$USER"
     step "Habilitando serviço de usuário..."
@@ -40,13 +40,13 @@ install_gamemode() {
 remove_gamemode() {
     systemctl --user disable --now gamemoded.service 2>/dev/null || true
     sudo gpasswd -d "$USER" gamemode 2>/dev/null || true
-    sudo pacman -R --noconfirm gamemode lib32-gamemode 2>/dev/null || true
+    remove_pkg gamemode lib32-gamemode
     log "GameMode removido."
 }
 
 install_mangohud() {
     step "Instalando MangoHud e GOverlay..."
-    sudo pacman -S --needed --noconfirm mangohud lib32-mangohud goverlay
+    install_pkg mangohud lib32-mangohud goverlay
     step "Criando config padrão..."
     mkdir -p "$HOME/.config/MangoHud"
     cat > "$HOME/.config/MangoHud/MangoHud.conf" <<'EOF'
@@ -65,68 +65,23 @@ EOF
     log "MangoHud instalado! Use MANGOHUD=1 na Steam."
 }
 remove_mangohud() {
-    sudo pacman -R --noconfirm mangohud lib32-mangohud goverlay 2>/dev/null || true
+    remove_pkg mangohud lib32-mangohud goverlay
     rm -rf "$HOME/.config/MangoHud"
     log "MangoHud removido."
 }
 
 install_steam() {
-    step "Instalando Steam e Millennium..."
-    sudo pacman -S --needed --noconfirm steam millennium
+    step "Instalando Steam + Millennium..."
+    install_pkg steam millennium
     log "Steam instalado!"
 }
 remove_steam() {
-    sudo pacman -R --noconfirm steam millennium 2>/dev/null || true
+    remove_pkg steam millennium
     log "Steam removido."
 }
 
-install_com_vysp3r_ProtonPlus() {
-    step "Instalando ProtonPlus..."
-    sudo flatpak install --noninteractive flathub com.vysp3r.ProtonPlus
-    log "ProtonPlus instalado."
-}
-remove_com_vysp3r_ProtonPlus() {
-    sudo flatpak uninstall --noninteractive com.vysp3r.ProtonPlus 2>/dev/null || true
-    log "ProtonPlus removido."
-}
-
-install_protontricks() {
-    step "Instalando Protontricks..."
-    sudo pacman -S --needed --noconfirm protontricks
-    log "Protontricks instalado."
-}
-remove_protontricks() {
-    sudo pacman -R --noconfirm protontricks 2>/dev/null || true
-    log "Protontricks removido."
-}
-
-install_winetricks() {
-    step "Instalando Winetricks..."
-    sudo pacman -S --needed --noconfirm winetricks
-    log "Winetricks instalado."
-}
-remove_winetricks() {
-    sudo pacman -R --noconfirm winetricks 2>/dev/null || true
-    log "Winetricks removido."
-}
-
-install_com_usebottles_bottles() {
-    step "Instalando Bottles..."
-    sudo flatpak install --noninteractive flathub com.usebottles.bottles
-    log "Bottles instalado."
-}
-remove_com_usebottles_bottles() {
-    sudo flatpak uninstall --noninteractive com.usebottles.bottles 2>/dev/null || true
-    log "Bottles removido."
-}
-
-install_lutris() {
-    step "Instalando Lutris..."
-    sudo pacman -S --needed --noconfirm lutris
-    log "Lutris instalado."
-}
 remove_lutris() {
-    sudo pacman -R --noconfirm lutris 2>/dev/null || true
+    remove_pkg lutris
     rm -rf "$HOME/.config/lutris" "$HOME/.local/share/lutris"
     log "Lutris e dados removidos."
 }

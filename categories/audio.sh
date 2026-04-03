@@ -13,7 +13,7 @@ desc_jamesdsp()    { echo "DSP avançado (bass boost, convolução)"; }
 
 install_easyeffects() {
     step "Instalando EasyEffects..."
-    sudo pacman -S --needed --noconfirm easyeffects lsp-plugins
+    install_pkg easyeffects lsp-plugins
     step "Configurando autostart..."
     mkdir -p "$HOME/.config/autostart"
     cat > "$HOME/.config/autostart/easyeffects-service.desktop" <<'EOF'
@@ -28,16 +28,15 @@ EOF
 }
 remove_easyeffects() {
     pkill -f easyeffects 2>/dev/null || true
-    sudo pacman -R --noconfirm easyeffects 2>/dev/null || true
+    remove_pkg easyeffects lsp-plugins
     rm -f "$HOME/.config/autostart/easyeffects-service.desktop"
     rm -rf "$HOME/.config/easyeffects"
     log "EasyEffects removido."
 }
 
 install_jamesdsp() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
     step "Instalando JamesDSP..."
-    $AUR -S --needed --noconfirm jamesdsp
+    install_pkg jamesdsp
     step "Configurando autostart..."
     mkdir -p "$HOME/.config/autostart"
     cat > "$HOME/.config/autostart/jamesdsp.desktop" <<'EOF'
@@ -52,7 +51,7 @@ EOF
 }
 remove_jamesdsp() {
     pkill -f jamesdsp 2>/dev/null || true
-    $AUR -R --noconfirm jamesdsp 2>/dev/null || true
+    remove_pkg jamesdsp
     rm -f "$HOME/.config/autostart/jamesdsp.desktop"
     rm -rf "$HOME/.config/jamesdsp"
     log "JamesDSP removido."

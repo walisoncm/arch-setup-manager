@@ -54,10 +54,28 @@ status_app() {
         "status_$normalize_id"
     else
         if [[ "$app_id" == *.* ]]; then
-            has_flatpak "$app_id"
+            has_fpk "$app_id"
         else
             has_pkg "$app_id"
         fi
+    fi
+}
+
+launch_app() {
+    local app_id="$1"
+    local normalize_id="${app_id//./_}"
+    if declare -f "launch_$normalize_id" > /dev/null; then
+        "launch_$normalize_id"
+    fi
+}
+
+manage_app() {
+    local app_id="$1" bbv_base="$2"
+    local normalize_id="${app_id//./_}"
+    MANAGE_FN=""
+    if declare -f "manage_$normalize_id" > /dev/null; then
+        eval "_mbound_${normalize_id}() { manage_${normalize_id} $(printf '%q' "$bbv_base"); }"
+        MANAGE_FN="_mbound_${normalize_id}"
     fi
 }
 
@@ -73,14 +91,14 @@ install_app() {
 
     if [[ "$app_id" == *.* ]]; then
         step "Instalando $name via Flatpak..."
-        install_flatpak "$app_id"
+        if ! status_app flatpak; then 
+            install_app flatpak
+        fi
+
+        install_fpk "$app_id"
     else
         step "Instalando $name via Repositórios..."
-        if need_aur; then
-            $AUR -S --needed --noconfirm "$app_id"
-        else
-            sudo pacman -S --needed --noconfirm "$app_id"
-        fi
+        install_pkg "$app_id"
     fi
 
     [[ $? -eq 0 ]] && ok "$name configurado!" || err "Falha ao instalar $app_id."
@@ -95,22 +113,11 @@ remove_app() {
         "remove_$normalize_id"
     elif [[ "$app_id" == *.* ]]; then
         step "Removendo $name (Flatpak)..."
-        sudo flatpak uninstall --noninteractive "$app_id"
+        uninstall_fpk "$app_id"
         [[ $? -eq 0 ]] && ok "$name removido." || warn "A remoção de $app_id reportou algo (ou já não existia)."
     else
         step "Removendo $name..."
-        if [[ -n "$AUR" ]]; then
-            $AUR -Rns --noconfirm "$app_id" 2>/dev/null || sudo pacman -Rns --noconfirm "$app_id"
-        else
-            sudo pacman -Rns --noconfirm "$app_id"
-        fi
+        remove_pkg "$app_id"
         [[ $? -eq 0 ]] && ok "$name removido." || warn "A remoção de $app_id reportou algo (ou já não existia)."
-    fi
-
-    local orphans
-    orphans="$(pacman -Qdtq 2>/dev/null)"
-    if [[ -n "$orphans" ]]; then
-        step "Removendo pacotes órfãos..."
-        sudo pacman -Rns --noconfirm $orphans 2>/dev/null || true
     fi
 }

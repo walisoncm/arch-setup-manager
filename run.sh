@@ -21,7 +21,9 @@ app="${2:-}"
 # ── LOG E FIFO DE STDIN ───────────────────────────────────────────────────────
 LOG="/tmp/bbv-action-${app}.log"
 STDIN_FIFO="/tmp/bbv-stdin-${app}.fifo"
+PID_FILE="/tmp/bbv-pid-${app}"
 > "$LOG"
+echo $$ > "$PID_FILE"
 rm -f "$STDIN_FIFO"
 mkfifo "$STDIN_FIFO"
 
@@ -48,7 +50,7 @@ echo "<span class='ok'>[+] Autorizado. Iniciando processo...</span>" | tee -a "$
 # Mantém sudo vivo em background
 ( while true; do sudo -n true; sleep 40; done ) &
 KEEP_SUDO_ALIVE_PID=$!
-trap "kill $KEEP_SUDO_ALIVE_PID 2>/dev/null; rm -f '$STDIN_FIFO'" EXIT
+trap "kill $KEEP_SUDO_ALIVE_PID 2>/dev/null; rm -f '$STDIN_FIFO' '$PID_FILE'" EXIT
 
 # ── EXECUÇÃO ─────────────────────────────────────────────────────────────────
 if [[ -n "$app" ]]; then

@@ -22,6 +22,8 @@ cat << HTML
   <div class="section-header">Apps disponíveis</div>
 HTML
 
+manage_htmls=()
+
 for key in "${apps[@]}"; do
     nm="$(name_app "$key")"
     ds="$(desc_app "$key")"
@@ -35,8 +37,21 @@ for key in "${apps[@]}"; do
     fi
 
     manage_btn=""
-    [[ "$key" == "fwupd" && $installed == true ]] && \
-        manage_btn='<button onclick="openFwupdModal()" class="btn-manage" title="Gerenciar fwupd">⚙</button>'
+    launch_btn=""
+    if [[ $installed == true ]]; then
+        manage_app "$key" "$bbv_base"
+        if [[ -n "$MANAGE_FN" ]]; then
+            manage_out=$("$MANAGE_FN")
+            manage_onclick=${manage_out%%$'\n'*}
+            manage_htmls+=("${manage_out#*$'\n'}")
+            manage_btn="<button onclick=\"$manage_onclick\" class=\"btn-manage\" title=\"Gerenciar $nm\">⚙</button>"
+        fi
+
+        launch_url=$(launch_app "$key")
+        if [[ -n "$launch_url" ]]; then
+            launch_btn="<button onclick=\"fetch('${bbv_base}/execute\$./launch.sh ${launch_url}')\" class=\"btn-launch\" title=\"Abrir $nm\">↗</button>"
+        fi
+    fi
 
     cat << HTML
   <div class="app-row">
@@ -45,6 +60,7 @@ for key in "${apps[@]}"; do
       <div class="app-desc">$ds</div>
     </div>
     <div class="app-actions">
+      $launch_btn
       $manage_btn
       $action_btn
     </div>
@@ -55,33 +71,26 @@ done
 cat << 'HTML'
 </div>
 
-<!-- ── Modal fwupd ─────────────────────────────────────────────────── -->
-<div id="fwupd-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:500; align-items:center; justify-content:center;">
-  <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); width:min(680px,92vw); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6);">
-
-    <!-- cabeçalho -->
-    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-shrink:0;">
-      <span style="font-weight:700; font-size:14px;">⚙ fwupd — Gerenciamento de Firmware</span>
-      <button onclick="closeFwupdModal()" style="background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; line-height:1; padding:0 4px;">✕</button>
-    </div>
-
-    <!-- ações -->
-    <div style="padding:14px 20px; border-bottom:1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap; flex-shrink:0;">
-      <button onclick="fwupdRun('refresh')"     class="btn btn-outline btn-sm">↻ Atualizar metadados</button>
-      <button onclick="fwupdRun('get-updates')" class="btn btn-primary btn-sm">🔍 Verificar atualizações</button>
-      <button id="fwupd-btn-install" onclick="fwupdRun('update')" class="btn btn-outline btn-sm" style="display:none; border-color:var(--success); color:var(--success);">⬇ Instalar atualizações</button>
-    </div>
-
-    <!-- console -->
-    <div id="fwupd-output"
-         style="flex:1; overflow-y:auto; padding:14px 18px; font-family:'JetBrains Mono','Fira Code',monospace; font-size:12px; line-height:1.7; background:#090912; color:#c4c4dc; white-space:pre-wrap; word-break:break-word; min-height:180px;">
-      Clique em <strong>Verificar atualizações</strong> para começar.
-    </div>
-
-  </div>
-</div>
-
 <style>
+.btn-launch {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    padding: 4px;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color .15s, background .15s;
+    color: var(--primary);
+  }
+  .btn-launch:hover { background: rgba(124,103,250,.15); }
+
 .btn-manage {
     background: none;
     border: none;
@@ -124,48 +133,8 @@ cat << 'HTML'
 </style>
 HTML
 
-cat << HTML
-<script>
-(function() {
-  var bbv = '${bbv_base}';
-
-  window.openFwupdModal = function() {
-    document.getElementById('fwupd-modal').style.display = 'flex';
-  };
-
-  window.closeFwupdModal = function() {
-    document.getElementById('fwupd-modal').style.display = 'none';
-  };
-
-  window.fwupdRun = function(action) {
-    var out    = document.getElementById('fwupd-output');
-    var btnIn  = document.getElementById('fwupd-btn-install');
-    out.innerHTML = '<span style="color:var(--muted);">Executando...</span>';
-
-    fetch(bbv + '/execute\$./fwupd-manage.sh ' + action)
-      .then(function(r) { return r.text(); })
-      .then(function(html) {
-        out.innerHTML = html;
-        if (action === 'get-updates') {
-          btnIn.style.display = out.innerHTML.includes('data-has-updates') ? 'inline-flex' : 'none';
-        }
-      })
-      .catch(function(err) {
-        out.textContent = 'Erro ao executar: ' + err;
-      });
-  };
-
-  // Fecha modal com Esc
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeFwupdModal();
-  });
-
-  // Fecha ao clicar fora do painel
-  document.getElementById('fwupd-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeFwupdModal();
-  });
-})();
-</script>
-HTML
+for html in "${manage_htmls[@]}"; do
+    echo "$html"
+done
 
 html_footer

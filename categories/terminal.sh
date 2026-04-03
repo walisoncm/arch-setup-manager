@@ -17,7 +17,7 @@ desc_fzf()       { echo "Fuzzy finder interativo para terminal"; }
 
 install_alacritty() {
     step "Instalando Alacritty..."
-    sudo pacman -S --needed --noconfirm alacritty
+    install_pkg alacritty
 
     step "Copiando configuração..."
     mkdir -p "$HOME/.config/alacritty/themes"
@@ -27,14 +27,14 @@ install_alacritty() {
     log "Alacritty instalado com tema Noctalia."
 }
 remove_alacritty() {
-    sudo pacman -R --noconfirm alacritty 2>/dev/null || true
+    remove_pkg alacritty
     rm -rf "$HOME/.config/alacritty"
     log "Alacritty removido."
 }
 
 install_tmux() {
     step "Instalando Tmux..."
-    sudo pacman -S --needed --noconfirm tmux
+    install_pkg tmux
 
     step "Copiando configuração..."
     mkdir -p "$HOME/.config/tmux"
@@ -51,14 +51,14 @@ install_tmux() {
     log "Tmux instalado com tema Nord."
 }
 remove_tmux() {
-    sudo pacman -R --noconfirm tmux 2>/dev/null || true
+    remove_pkg tmux
     rm -rf "$HOME/.config/tmux"
     log "Tmux e plugins removidos."
 }
 
 install_starship() {
     step "Instalando Starship..."
-    sudo pacman -S --needed --noconfirm starship
+    install_pkg starship
 
     step "Copiando configuração..."
     cp "$SCRIPT_DIR/configs/starship.toml" "$HOME/.config/starship.toml"
@@ -73,7 +73,7 @@ install_starship() {
     log "Starship instalado com prompt customizado."
 }
 remove_starship() {
-    sudo pacman -R --noconfirm starship 2>/dev/null || true
+    remove_pkg starship
     rm -f "$HOME/.config/starship.toml"
     rm -f "$HOME/.config/fish/conf.d/starship.fish"
     log "Starship removido."
@@ -81,7 +81,7 @@ remove_starship() {
 
 install_fzf() {
     step "Instalando fzf..."
-    sudo pacman -S --needed --noconfirm fzf
+    install_pkg fzf
 
     step "Adicionando ao Fish..."
     mkdir -p "$HOME/.config/fish/conf.d"
@@ -92,7 +92,7 @@ EOF
     log "fzf instalado com integração Fish (Ctrl+R, Ctrl+T, Alt+C)."
 }
 remove_fzf() {
-    sudo pacman -R --noconfirm fzf 2>/dev/null || true
+    remove_pkg fzf
     rm -f "$HOME/.config/fish/conf.d/fzf.fish"
     log "fzf removido."
 }

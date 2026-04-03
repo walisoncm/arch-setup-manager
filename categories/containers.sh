@@ -26,7 +26,7 @@ status_docker() { has_pkg "docker" && in_group "docker"; }
 
 install_docker() {
     step "Instalando Docker..."
-    sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx
+    install_pkg docker docker-compose docker-buildx
     step "Habilitando serviço..."
     sudo systemctl enable --now docker.socket
     sudo systemctl enable docker.service
@@ -45,62 +45,32 @@ EOF
 remove_docker() {
     sudo systemctl stop docker.service docker.socket 2>/dev/null || true
     sudo systemctl disable docker.service docker.socket 2>/dev/null || true
-    sudo pacman -R --noconfirm docker docker-compose docker-buildx 2>/dev/null || true
+    remove_pkg docker docker-compose docker-buildx
     sudo rm -f /etc/docker/daemon.json
     log "Docker removido."
 }
 
 install_podman() {
     step "Instalando Podman..."
-    sudo pacman -S --needed --noconfirm podman podman-compose
+    install_pkg podman podman-compose
     log "Podman instalado!"
 }
 remove_podman() {
-    sudo pacman -R --noconfirm podman podman-compose 2>/dev/null || true
+    remove_pkg podman podman-compose
     log "Podman removido."
-}
-
-install_podman-desktop() {
-    step "Instalando Podman Desktop..."
-    sudo pacman -S --needed --noconfirm podman-desktop
-    log "Podman Desktop instalado."
-}
-remove_podman-desktop() {
-    sudo pacman -R --noconfirm podman-desktop 2>/dev/null || true
-    log "Podman Desktop removido."
 }
 
 install_winboat-bin() {
     need_aur || { err "AUR helper não encontrado."; return 1; }
     step "Instalando Winboat..."
-    $AUR -S --needed --noconfirm winboat-bin
     has_pkg "podman" || install_podman
+    install_pkg winboat-bin
     log "Winboat instalado!"
 }
 remove_winboat-bin() {
     [[ -f "$HOME/.winboat/podman-compose.yml" ]] && (cd "$HOME/.winboat" && podman compose down 2>/dev/null) || true
-    $AUR -R --noconfirm winboat-bin 2>/dev/null || true
+    remove_pkg winboat-bin
     log "Winboat removido."
-}
-
-install_gnome-boxes() {
-    step "Instalando GNOME Boxes..."
-    sudo pacman -S --needed --noconfirm gnome-boxes
-    log "GNOME Boxes instalado!"
-}
-remove_gnome-boxes() {
-    sudo pacman -R --noconfirm gnome-boxes 2>/dev/null || true
-    log "GNOME Boxes removido."
-}
-
-install_distrobox() {
-    step "Instalando Distrobox..."
-    sudo pacman -S --needed --noconfirm distrobox
-    log "Distrobox instalado!"
-}
-remove_distrobox() {
-    sudo pacman -R --noconfirm distrobox 2>/dev/null || true
-    log "Distrobox removido."
 }
 
 status_waydroid() {
@@ -148,14 +118,12 @@ _waydroid_fix_nvidia_render() {
 }
 
 install_waydroid() {
-    need_aur || { err "AUR helper não encontrado."; return 1; }
-
     step "Instalando dependências..."
     # wl-clipboard: integração de clipboard Wayland ↔ Android
-    sudo pacman -S --needed --noconfirm wl-clipboard python || { err "Falha ao instalar dependências."; return 1; }
+    install_pkg wl-clipboard python || { err "Falha ao instalar dependências."; return 1; }
 
     step "Instalando Waydroid..."
-    $AUR -S --needed --noconfirm waydroid || { err "Falha ao instalar waydroid."; return 1; }
+    install_pkg waydroid || { err "Falha ao instalar waydroid."; return 1; }
 
     step "Carregando módulo binder_linux..."
     if ! lsmod 2>/dev/null | grep -q binder; then
@@ -210,7 +178,7 @@ remove_waydroid() {
     sudo systemctl disable waydroid-container.service 2>/dev/null || true
 
     step "Removendo pacote..."
-    $AUR -R --noconfirm waydroid 2>/dev/null || sudo pacman -R --noconfirm waydroid 2>/dev/null || true
+    remove_pkg waydroid
 
     step "Limpando dados e entradas do launcher..."
     sudo rm -rf /var/lib/waydroid
