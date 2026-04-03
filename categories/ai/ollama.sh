@@ -21,6 +21,7 @@ EOF
     sudo systemctl daemon-reload
     sudo systemctl enable --now ollama.service 2>/dev/null || true
     log "Ollama instalado!"
+    warn "Nenhum modelo foi baixado. Execute: ollama pull <modelo> (ex: ollama pull llama3)"
 }
 remove_ollama() {
     sudo systemctl stop ollama.service 2>/dev/null || true
