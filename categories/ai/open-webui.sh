@@ -16,6 +16,11 @@ install_open-webui() {
     step "Baixando imagem Open WebUI..."
     sudo docker pull ghcr.io/open-webui/open-webui:main || { err "Falha ao baixar a imagem."; return 1; }
 
+    step "Abrindo porta do Ollama para a rede Docker (UFW)..."
+    if has_pkg "ufw"; then
+        sudo ufw allow from 172.17.0.0/16 to any port 11434 2>/dev/null || true
+    fi
+
     step "Iniciando container Open WebUI..."
     sudo docker stop open-webui 2>/dev/null || true
     sudo docker rm   open-webui 2>/dev/null || true
@@ -54,6 +59,10 @@ remove_open-webui() {
 
     step "Removendo lançador..."
     rm -f "$HOME/.local/share/applications/open-webui.desktop"
+
+    if has_pkg "ufw"; then
+        sudo ufw delete allow from 172.17.0.0/16 to any port 11434 2>/dev/null || true
+    fi
 
     log "Open WebUI removido."
 }
