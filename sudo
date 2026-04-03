@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Wrapper de sudo para o Arch Setup Manager
+# Intercepta TODAS as chamadas a sudo e usa o popup gráfico via SUDO_ASKPASS
+
+_APP_DIR="$(dirname "$(readlink -f "$0")")"
+
+# Garante que as variáveis de display estão definidas para o zenity
+export DISPLAY="${DISPLAY:-:0}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+export SUDO_ASKPASS="${_APP_DIR}/askpass.sh"
+
+exec /usr/bin/sudo -A "$@"
