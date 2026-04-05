@@ -9,14 +9,10 @@ _portal_conf_ok() {
     [[ -f "$PORTAL_CONF" ]] && grep -q "^default=gtk" "$PORTAL_CONF"
 }
 
-status_xdg_portal() {
-    has_pkg "xdg-desktop-portal-gtk" && has_pkg "xdg-desktop-portal-wlr" && _portal_conf_ok
-}
+status_xdg_portal() { _portal_conf_ok; }
 
 install_xdg_portal() {
-    step "Instalando xdg-desktop-portal backends..."
-    install_pkg xdg-desktop-portal-gtk xdg-desktop-portal-wlr
-
+    step "Configurando XDG Desktop Portal..."
     mkdir -p "$(dirname "$PORTAL_CONF")"
     cat > "$PORTAL_CONF" <<'EOF'
 [preferred]
@@ -30,7 +26,6 @@ EOF
 }
 
 remove_xdg_portal() {
-    remove_pkg xdg-desktop-portal-gtk xdg-desktop-portal-wlr
     rm -f "$PORTAL_CONF"
-    log "XDG Portal removido."
+    log "Configuração do XDG Portal removida."
 }

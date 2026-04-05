@@ -4,7 +4,7 @@
 source "./lib/helpers.sh"
 
 # ─── ARRAYS GLOBAIS ───────────────────────────────────────────────────────────
-declare -A CATS_TITLE CATS_ICON CATS_APPS CATS_DESC
+declare -A CATS_TITLE CATS_ICON CATS_APPS CATS_DESC CATS_TYPE
 declare -A APP_NAMES APP_DESCS
 CATEGORIES=()
 
@@ -25,7 +25,8 @@ if [[ -d "$MOD_PATH" ]]; then
             CATS_TITLE[$CAT_ID]="$CAT_TITLE"
             CATS_ICON[$CAT_ID]="$CAT_ICON"
             CATS_DESC[$CAT_ID]="$CAT_DESC"
-            unset CAT_ID CAT_TITLE CAT_ICON CAT_DESC
+            CATS_TYPE[$CAT_ID]="${CAT_TYPE:-app}"
+            unset CAT_ID CAT_TITLE CAT_ICON CAT_DESC CAT_TYPE
 
             _cat_apps=""
             for app_file in "${cat_dir}"*.sh; do
@@ -84,7 +85,7 @@ desc_app() {
 
 status_app() {
     local app_id="$1"
-    local normalize_id="${app_id//./_}"
+    local normalize_id="${app_id//[.-]/_}"
     if declare -f "status_$normalize_id" > /dev/null; then
         "status_$normalize_id"
     else
@@ -98,7 +99,7 @@ status_app() {
 
 launch_app() {
     local app_id="$1"
-    local normalize_id="${app_id//./_}"
+    local normalize_id="${app_id//[.-]/_}"
     if declare -f "launch_$normalize_id" > /dev/null; then
         "launch_$normalize_id"
     fi
@@ -106,7 +107,7 @@ launch_app() {
 
 manage_app() {
     local app_id="$1" bbv_base="$2"
-    local normalize_id="${app_id//./_}"
+    local normalize_id="${app_id//[.-]/_}"
     MANAGE_FN=""
     if declare -f "manage_$normalize_id" > /dev/null; then
         eval "_mbound_${normalize_id}() { manage_${normalize_id} $(printf '%q' "$bbv_base"); }"
@@ -116,7 +117,7 @@ manage_app() {
 
 install_app() {
     local app_id="$1"
-    local normalize_id="${app_id//./_}"
+    local normalize_id="${app_id//[.-]/_}"
     local name; name="$(name_app "$app_id")"
 
     if declare -f "install_$normalize_id" > /dev/null; then
@@ -141,7 +142,7 @@ install_app() {
 
 remove_app() {
     local app_id="$1"
-    local normalize_id="${app_id//./_}"
+    local normalize_id="${app_id//[.-]/_}"
     local name; name="$(name_app "$app_id")"
 
     if declare -f "remove_$normalize_id" > /dev/null; then

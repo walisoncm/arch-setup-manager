@@ -12,7 +12,13 @@ cat_key="${3:-}"
 [[ -z "$app" ]] && { echo "Erro: app não especificado"; exit 1; }
 
 nm; nm="$(name_app "$app")"
-[[ "$action" == "install" ]] && verb="Instalando" || verb="Removendo"
+if [[ "${CATS_TYPE[$cat_key]:-app}" == "config" ]]; then
+    verb="Aplicando"
+elif [[ "$action" == "install" ]]; then
+    verb="Instalando"
+else
+    verb="Removendo"
+fi
 
 html_header "$verb $nm"
 

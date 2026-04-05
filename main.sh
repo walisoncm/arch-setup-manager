@@ -29,36 +29,54 @@ cat << HTML
 </div>
 
 <div class="main-scroll">
-  <div style="padding:8px 20px 0; color:var(--muted); font-size:12px;">
-    Selecione uma categoria para gerenciar os apps
-  </div>
+HTML
+
+_render_section() {
+    local type_filter="$1" section_label="$2" count_label="$3"
+    local has_any=false
+
+    for cat in "${CATEGORIES[@]}"; do
+        [[ "${CATS_TYPE[$cat]:-app}" != "$type_filter" ]] && continue
+        has_any=true
+        break
+    done
+    $has_any || return
+
+    cat << HTML
+  <div style="padding:8px 20px 0; color:var(--muted); font-size:12px;">$section_label</div>
   <div class="grid">
 HTML
 
-for cat in "${CATEGORIES[@]}"; do
-    read -r inst total < <(count_installed "$cat")
+    for cat in "${CATEGORIES[@]}"; do
+        [[ "${CATS_TYPE[$cat]:-app}" != "$type_filter" ]] && continue
+        read -r inst total < <(count_installed "$cat")
 
-    if   (( inst == total && total > 0 )); then color_class="count-full"
-    elif (( inst > 0 ));                   then color_class="count-partial"
-    else                                        color_class="count-none"
-    fi
+        if   (( inst == total && total > 0 )); then color_class="count-full"
+        elif (( inst > 0 ));                   then color_class="count-partial"
+        else                                        color_class="count-none"
+        fi
 
-    icon="${CATS_ICON[$cat]}"
-    title="${CATS_TITLE[$cat]}"
-    desc="${CATS_DESC[$cat]}"
+        icon="${CATS_ICON[$cat]}"
+        title="${CATS_TITLE[$cat]}"
+        desc="${CATS_DESC[$cat]}"
 
-    cat << HTML
+        cat << HTML
     <a class="cat-card" href="/execute$./category.sh $cat">
       <div class="cat-icon">$icon</div>
       <div class="cat-name">$title</div>
       <div class="cat-desc">$desc</div>
-      <div class="cat-count $color_class">$inst / $total instalados</div>
+      <div class="cat-count $color_class">$inst / $total $count_label</div>
     </a>
 HTML
-done
+    done
+
+    echo "  </div>"
+}
+
+_render_section app    "Selecione uma categoria para gerenciar os apps" "instalados"
+_render_section config "Configurações do sistema" "configurados"
 
 cat << 'HTML'
-  </div>
 </div>
 
 <div class="main-footer">

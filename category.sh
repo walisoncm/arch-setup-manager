@@ -8,6 +8,7 @@ source "$SCRIPT_DIR/backend.sh"
 cat="${1:-gaming}"
 title="${CATS_TITLE[$cat]:-Categoria}"
 icon="${CATS_ICON[$cat]}"
+cat_type="${CATS_TYPE[$cat]:-app}"
 read -ra apps <<< "${CATS_APPS[$cat]}"
 bbv_base="http://127.0.0.1:${bbv_port:-6482}"
 
@@ -19,7 +20,7 @@ cat << HTML
   <span class="nav-title">$icon&nbsp; $title</span>
 </div>
 <div class="section" style="margin-top:16px;">
-  <div class="section-header">Apps disponíveis</div>
+  <div class="section-header">$([[ $cat_type == config ]] && echo "Configurações" || echo "Apps disponíveis")</div>
 HTML
 
 manage_htmls=()
@@ -28,7 +29,15 @@ for key in "${apps[@]}"; do
     nm="$(name_app "$key")"
     ds="$(desc_app "$key")"
 
-    if status_app "$key" 2>/dev/null; then
+    if [[ $cat_type == config ]]; then
+        if status_app "$key" 2>/dev/null; then
+            installed=true
+            action_btn="<a href=\"/execute\$./action.sh install $key $cat\" class=\"btn-icon btn-icon-config\" title=\"Reaplicar $nm\">↺</a>"
+        else
+            installed=false
+            action_btn="<a href=\"/execute\$./action.sh install $key $cat\" class=\"btn-icon btn-icon-primary\" title=\"Aplicar $nm\">▶</a>"
+        fi
+    elif status_app "$key" 2>/dev/null; then
         installed=true
         action_btn="<a href=\"/execute\$./confirm.sh $key $cat\" class=\"btn-icon btn-icon-danger\" title=\"Remover $nm\">🗑</a>"
     else
@@ -78,7 +87,7 @@ cat << 'HTML'
     cursor: pointer;
     width: 30px;
     height: 30px;
-    padding: 4px;
+    padding: 3px;
     border-radius: 6px;
     font-size: 16px;
     line-height: 1;
@@ -128,8 +137,10 @@ cat << 'HTML'
   .btn-icon:active { opacity: .7; }
   .btn-icon-danger  { background: rgba(224,108,117,.18); color: var(--danger); }
   .btn-icon-primary { background: rgba(61,220,132,.18);  color: var(--success); }
+  .btn-icon-config  { background: rgba(124,103,250,.18); color: var(--primary); }
   .btn-icon-danger:hover  { background: rgba(224,108,117,.3); }
   .btn-icon-primary:hover { background: rgba(61,220,132,.3); }
+  .btn-icon-config:hover  { background: rgba(124,103,250,.3); }
 </style>
 HTML
 
