@@ -3,7 +3,7 @@ APP_ID="proton-vpn-gtk-app"
 APP_NAME="ProtonVPN"
 APP_DESC="Cliente oficial ProtonVPN"
 
-remove_proton-vpn-gtk-app() {
+remove_proton_vpn_gtk_app() {
     remove_pkg proton-vpn-gtk-app
     rm -rf "$HOME/.config/protonvpn"
     log "ProtonVPN removido."

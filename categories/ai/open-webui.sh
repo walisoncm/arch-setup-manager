@@ -3,10 +3,10 @@ APP_ID="open-webui"
 APP_NAME="Open WebUI"
 APP_DESC="Interface web para Ollama (chat, modelos, histórico)"
 
-status_open-webui() { has_cmd "docker" && docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^open-webui$"; }
-launch_open-webui() { echo "http://localhost:11500"; }
+status_open_webui() { has_cmd "docker" && docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^open-webui$"; }
+launch_open_webui() { echo "http://localhost:11500"; }
 
-install_open-webui() {
+install_open_webui() {
     step "Verificando Docker..."
     if ! has_cmd "docker"; then
         install_app docker || { err "Falha ao instalar Docker."; return 1; }
@@ -48,7 +48,7 @@ DESKTOP
 
     log "Open WebUI instalado! Acesse em http://localhost:11500"
 }
-remove_open-webui() {
+remove_open_webui() {
     step "Parando e removendo container..."
     sudo docker stop open-webui 2>/dev/null || true
     sudo docker rm   open-webui 2>/dev/null || true

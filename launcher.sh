@@ -25,6 +25,5 @@ exec bigbashview \
     --directory "$APP_DIR" \
     --name "Arch Setup Manager" \
     --icon "$APP_DIR/icon.svg" \
-    --size 980x720 \
-    --gpu
+    --size 980x720
 
