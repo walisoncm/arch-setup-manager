@@ -268,16 +268,18 @@ install_ollama() {
         fi
     fi
 
-    step "Configurando Ollama para aceitar conexões externas (Docker)..."
+    step "Configurando Ollama (conexões externas + GPU NVIDIA)..."
     sudo mkdir -p /etc/systemd/system/ollama.service.d
     sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null <<'EOF'
 [Service]
 Environment="OLLAMA_HOST=0.0.0.0"
+Environment="LD_LIBRARY_PATH=/usr/lib/nvidia:/usr/lib"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/bin"
 EOF
 
     sudo systemctl daemon-reload
     sudo systemctl enable --now ollama.service 2>/dev/null || true
-    log "Ollama instalado!"
+    log "Ollama instalado com suporte a GPU NVIDIA!"
     warn "Nenhum modelo foi baixado. Execute: ollama pull <modelo> (ex: ollama pull llama3)"
 }
 remove_ollama() {
