@@ -6,7 +6,7 @@ for _h in paru yay; do command -v "$_h" &>/dev/null && AUR="$_h" && break; done
 
 has_pkg()     { pacman -Qi "$1" &>/dev/null 2>&1; }
 has_fpk()     { flatpak info "$1" &>/dev/null 2>&1; }
-has_cmd()     { command -v "$1" &>/dev/null; }
+has_cmd()     {  command -v "$1" &>/dev/null; }
 svc_enabled() { systemctl is-enabled "$1" &>/dev/null 2>&1; }
 in_group()    { id -nG "$USER" | grep -qw "$1"; }
 need_aur()    { [[ -n "$AUR" ]]; }

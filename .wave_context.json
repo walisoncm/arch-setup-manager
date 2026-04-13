@@ -1,0 +1,363 @@
+{
+  "meta": {
+    "project": "Arch Setup Manager",
+    "description": "Gerenciador gráfico de apps e configurações para CachyOS / Arch Linux — Acer Nitro V15 (ANV15-41)",
+    "runtime": "BigBashView (BBV) — framework que serve scripts Bash como páginas HTML em uma webview GTK",
+    "entry_point": "launcher.sh",
+    "generated_at": "2026-04-10",
+    "last_updated": "2026-04-10"
+  },
+
+  "architecture": {
+    "overview": "O BBV serve scripts .sh como respostas HTTP. Cada script gera HTML+CSS+JS completo. A navegação usa hrefs do tipo /execute$./script.sh [args]. Não há framework JS — tudo é vanilla JS + fetch + polling.",
+    "request_flow": [
+      "launcher.sh  → bigbashview --directory $APP_DIR (porta 6482)",
+      "main.sh      → lista categorias em grid (usa backend.sh para metadados)",
+      "category.sh  → lista apps da categoria com botões de ação/gerenciamento",
+      "confirm.sh   → confirmação antes de remover",
+      "action.sh    → página de instalação/remoção com terminal embutido (JS polling)",
+      "run.sh       → executor backend: lança install_app/remove_app, grava /tmp/bbv-action-<app>.log",
+      "log-tail.sh  → serve bytes do log a partir de um offset (usado pelo JS de action.sh)",
+      "stdin-relay.sh → escreve $input no FIFO /tmp/bbv-stdin-<app>.fifo",
+      "kill.sh      → mata a árvore de processos e escreve ___DONE_130___ no log"
+    ],
+    "sudo_pattern": "run.sh e scripts de manage/* exportam SUDO_ASKPASS=askpass.sh e sobrescrevem sudo() para usar sudo -A quando não há credenciais em cache (sudo -n). askpass.sh usa zenity --password.",
+    "log_protocol": "run.sh grava HTML parcial no log; JavaScript faz polling a cada 500ms via log-tail.sh com offset de bytes. Quando aparece o marcador ___DONE_<exitcode>___, o polling para.",
+    "manage_pattern": "manage_<app>() emite duas partes separadas por newline: (1) string do onclick JS, (2) HTML do modal + <script>. category.sh separa as partes e injeta o botão ⚙ com o onclick.",
+    "plugin_pattern": "Cada categoria é uma pasta em categories/<id>/. category.sh define CAT_ID/TITLE/ICON/DESC/TYPE. Cada *.sh na pasta define APP_ID/NAME/DESC + funções opcionais: status_<norm>, install_<norm>, remove_<norm>, manage_<norm>, launch_<norm>. Ids com pontos/hifens são normalizados com // e // para nomes de funções.",
+    "cat_types": {
+      "app": "apps instaláveis/removíveis (botão ⬇/🗑)",
+      "config": "configurações aplicáveis/reaplicáveis (botão ▶/↺) — não mostram confirmação de remoção"
+    },
+    "flatpak_convention": "APP_ID com ponto → Flatpak (flathub). Sem ponto → pacman/AUR.",
+    "bbv_port": "6482 (padrão BBV, configurável via $bbv_port)"
+  },
+
+  "file_tree": {
+    "/": [
+      "action.sh", "askpass.sh", "backend.sh", "category.sh",
+      "command", "common.sh", "confirm.sh", "fwupd-manage.sh", "icon.svg",
+      "kill.sh", "launch.sh", "launcher.sh", "log-tail.sh",
+      "main.sh", "ollama-manage.sh", "run.sh", "stdin-relay.sh",
+      "sudo", "waveterm-manage.sh"
+    ],
+    "lib/": ["helpers.sh"],
+    "configs/": [
+      "alacritty-noctalia.toml", "alacritty.toml",
+      "nvim-init.lua", "starship.toml", "tmux.conf"
+    ],
+    "categories/ai/": ["category.sh", "ollama.sh", "open-webui.sh", "waveterm-bin.sh"],
+    "categories/browsers/": ["category.sh", "zen-browser-bin.sh"],
+    "categories/communication/": ["category.sh", "com.rtosta.zapzap.sh", "dev.appoutlet.DisCorkie.sh", "vesktop.sh"],
+    "categories/configs/": ["xdg-portal.sh"],
+    "categories/containers/": ["category.sh", "distrobox.sh", "docker.sh", "gnome-boxes.sh", "podman-desktop.sh", "podman.sh", "winboat-bin.sh"],
+    "categories/development/": ["category.sh", "bruno-bin.sh", "cuda.sh", "dev.zed.Zed.sh", "neovim.sh", "nvm-fish.sh", "pgadmin4-desktop-bin.sh", "rest.insomnia.Insomnia.sh"],
+    "categories/gaming/": ["category.sh", "com.usebottles.bottles.sh", "com.vysp3r.ProtonPlus.sh", "gamemode.sh", "gamescope.sh", "heroic-games-launcher-bin.sh", "lutris.sh", "mangohud.sh", "protontricks.sh", "steam.sh", "winetricks.sh"],
+    "categories/graphics/": ["category.sh", "inkscape.sh", "krita.sh", "org.gimp.GIMP.sh"],
+    "categories/hardware/": ["category.sh", "damx.sh"],
+    "categories/media/": ["category.sh", "gstreamer.sh", "haruna.sh", "libdvdcss.sh", "pavucontrol.sh", "pear-desktop.sh"],
+    "categories/network/": ["category.sh", "com.freerdp.FreeRDP.sh", "kdeconnect.sh", "org.localsend.localsend_app.sh", "proton-vpn-gtk-app.sh", "rustdesk-bin.sh", "ufw.sh"],
+    "categories/productivity/": ["category.sh", "apostrophe.sh", "obsidian.sh", "proton-pass.sh"],
+    "categories/system/": ["category.sh", "btop.sh", "earlyoom.sh", "flatpak.sh", "fwupd.sh", "shelly.sh"],
+    "categories/terminal/": ["category.sh", "alacritty.sh", "fastfetch.sh", "fzf.sh", "starship.sh", "tmux.sh"]
+  },
+
+  "categories_registry": {
+    "ai":           { "title": "IA",            "icon": "🤖", "desc": "IA Local com aceleração GPU",                      "type": "app" },
+    "browsers":     { "title": "Navegadores",   "icon": "🌐", "desc": "Navegadores Web",                                   "type": "app" },
+    "communication":{ "title": "Comunicação",   "icon": "💬", "desc": "Chat e mensagens",                                  "type": "app" },
+    "containers":   { "title": "Containers",    "icon": "🐋", "desc": "Virtual machines e containers",                     "type": "app" },
+    "development":  { "title": "Desenvolvimento","icon":"💻",  "desc": "Editores, LSPs, DB e ferramentas",                  "type": "app" },
+    "gaming":       { "title": "Gaming",        "icon": "🎮", "desc": "Performance, overlays e launchers",                 "type": "app" },
+    "graphics":     { "title": "Gráficos",      "icon": "🎨", "desc": "Edição de imagem e design",                         "type": "app" },
+    "hardware":     { "title": "Hardware",      "icon": "🔋", "desc": "Bateria, performance e RGB",                        "type": "app" },
+    "media":        { "title": "Mídia",         "icon": "▶️",  "desc": "Players de vídeo, áudio e codecs",                 "type": "app" },
+    "network":      { "title": "Rede",          "icon": "🌐", "desc": "VPN, firewall, conectividade e compartilhamento",   "type": "app" },
+    "productivity": { "title": "Produtividade", "icon": "📝", "desc": "Notas e senhas",                                    "type": "app" },
+    "system":       { "title": "Sistema",       "icon": "⚙️",  "desc": "Utilitários e otimizações",                        "type": "app" },
+    "terminal":     { "title": "Terminal",      "icon": "🖥️",  "desc": "Emuladores, multiplexer e prompt",                 "type": "app" },
+    "configs":      { "title": "Configurações", "icon": "⚙",  "desc": "Configurações do sistema (type=config)",            "type": "config", "note": "Pasta configs/ não tem category.sh — apps de config aparecem no main como seção separada via _render_section config" }
+  },
+
+  "scripts": {
+
+    "common_sh": {
+      "path": "common.sh",
+      "status": "OK — restaurado via git checkout HEAD -- common.sh em 2026-04-10",
+      "role": "CSS global (variáveis CSS, layout, botões, grid, app-row, terminal styles) + funções html_header(), html_footer(), format_output()",
+      "css_vars": {
+        "--bg": "#11111e", "--surface": "#18182a", "--card": "#20203a", "--card2": "#252540",
+        "--border": "#32325a", "--primary": "#7c67fa", "--primary2": "#6051d8",
+        "--success": "#3ddc84", "--warn": "#ffb74d", "--danger": "#e06c75",
+        "--text": "#e2e2f0", "--muted": "#7878a0", "--radius": "12px"
+      },
+      "functions": {
+        "html_header(title)": "Emite DOCTYPE + <head> com APP_CSS injetado + abre <body>",
+        "html_footer()": "Fecha </body></html> + script de loading feedback em links main.sh",
+        "format_output()": "Filtra stdin: remove ANSI, escapa HTML, aplica classes t-ok/t-warn/t-err/t-step baseado em prefixos [+]/[!]/[✗]/──▸"
+      }
+    },
+
+    "lib/helpers.sh": {
+      "path": "lib/helpers.sh",
+      "role": "Utilitários de detecção e instalação de pacotes, helpers de log",
+      "aur_detection": "Detecta paru ou yay no PATH e seta $AUR",
+      "functions": {
+        "has_pkg(pkg)":       "pacman -Qi — verifica se pacote está instalado",
+        "has_fpk(id)":        "flatpak info — verifica se Flatpak está instalado",
+        "has_cmd(cmd)":       "command -v — verifica binário no PATH",
+        "svc_enabled(svc)":   "systemctl is-enabled",
+        "in_group(grp)":      "verifica se $USER está no grupo",
+        "need_aur()":         "retorna true se AUR helper disponível",
+        "pacman_unlock()":    "remove /var/lib/pacman/db.lck se stale (sem pacman rodando)",
+        "install_pkg(...)":   "usa $AUR -S --needed --noconfirm ou sudo pacman -S",
+        "install_fpk(id)":    "sudo flatpak install --noninteractive flathub $id",
+        "uninstall_fpk(...)": "sudo flatpak uninstall --noninteractive",
+        "remove_pkg(...)":    "remove pacote + orphans via $AUR -Rns ou pacman -Rns",
+        "log(msg)":           "echo verde [+]",
+        "warn(msg)":          "echo amarelo [!]",
+        "err(msg)":           "echo vermelho [✗]",
+        "step(msg)":          "echo ciano ──▸ negrito (inicia seção no terminal)",
+        "ok(msg)":            "alias de log()"
+      }
+    },
+
+    "backend.sh": {
+      "path": "backend.sh",
+      "role": "Loader dinâmico: varre categories/**/category.sh e *.sh, popula arrays globais, expõe API de alto nível",
+      "globals": {
+        "CATEGORIES[]":  "lista ordenada de CAT_IDs",
+        "CATS_TITLE[id]":"título da categoria",
+        "CATS_ICON[id]": "emoji/ícone",
+        "CATS_DESC[id]": "descrição",
+        "CATS_TYPE[id]": "app | config",
+        "CATS_APPS[id]": "string space-separated de APP_IDs",
+        "APP_NAMES[id]": "nome do app",
+        "APP_DESCS[id]": "descrição do app"
+      },
+      "api": {
+        "count_installed(cat)":    "imprime '<installed> <total>' contando status_app para cada app da categoria",
+        "name_app(id)":            "chama name_<norm>() ou lê APP_NAMES[id] ou retorna id",
+        "desc_app(id)":            "chama desc_<norm>() ou lê APP_DESCS[id]",
+        "status_app(id)":          "chama status_<norm>(); fallback: has_fpk se id contém ponto, has_pkg caso contrário",
+        "launch_app(id)":          "chama launch_<norm>() → retorna URL para xdg-open",
+        "manage_app(id, bbv_base)":"chama manage_<norm>(bbv_base) → seta $MANAGE_FN com wrapper bound",
+        "install_app(id)":         "chama install_<norm>() ou install_fpk/install_pkg com step/ok/err",
+        "remove_app(id)":          "chama remove_<norm>() ou uninstall_fpk/remove_pkg"
+      },
+      "normalization": "APP_ID com '.' ou '-' são normalizados via ${id//[.-]/_} para nomes de funções"
+    },
+
+    "main.sh": {
+      "path": "main.sh",
+      "role": "Página inicial — grid de categorias com contadores de instalação",
+      "sources": ["common.sh", "backend.sh"],
+      "layout": "nav fixo + div.main-scroll (grid de cat-cards) + main-footer com botão Fechar",
+      "sections": {
+        "app":    "_render_section app    → Selecione uma categoria",
+        "config": "_render_section config → Configurações do sistema"
+      },
+      "count_colors": {
+        "count-full":    "inst == total && total > 0  → verde (--success)",
+        "count-partial": "inst > 0                    → amarelo (--warn)",
+        "count-none":    "inst == 0                   → cinza (--muted)"
+      },
+      "nav_link_format": "/execute$./category.sh <cat_id>"
+    },
+
+    "category.sh": {
+      "path": "category.sh",
+      "role": "Lista apps de uma categoria com botões de ação contextual",
+      "args": "CAT_ID (ex: gaming)",
+      "sources": ["common.sh", "backend.sh"],
+      "app_row_logic": {
+        "type_config": "status → ↺ (reaplicar) ou ▶ (aplicar)",
+        "type_app_installed": "🗑 → /execute$./confirm.sh <app> <cat>",
+        "type_app_not_installed": "⬇ → /execute$./action.sh install <app> <cat>"
+      },
+      "manage_btn": "Se manage_app() retorna MANAGE_FN, injeta botão ⚙ com onclick extraído da primeira linha do output",
+      "launch_btn": "Se launch_app() retorna URL, injeta botão ↗ com fetch para /execute$./launch.sh <url>"
+    },
+
+    "action.sh": {
+      "path": "action.sh",
+      "role": "Página de execução com terminal embutido e polling de log",
+      "args": "ACTION(install|remove) APP CAT",
+      "sources": ["common.sh", "backend.sh"],
+      "js_vars": {
+        "LOG_URL":   "${bbv_base}/execute$./log-tail.sh ${app}",
+        "RUN_URL":   "${bbv_base}/execute$./run.sh ${action} ${app} ${cat_key}",
+        "STDIN_URL": "${bbv_base}/execute$./stdin-relay.sh ${app}",
+        "KILL_URL":  "${bbv_base}/execute$./kill.sh ${app}"
+      },
+      "states": {
+        "state-loading": "spinner + texto enquanto poll ativo",
+        "state-result":  "mensagem verde (sucesso) ou vermelha (falhou) ao detectar ___DONE_<n>___"
+      },
+      "polling": "setInterval 500ms, fetch LOG_URL+byteOffset, detecta ___DONE_<exitcode>___",
+      "terminal_controls": "btn-close (kill), btn-minimize (oculta), btn-maximize (fullscreen), btn-copy (clipboard)",
+      "stdin": "input + botão → POST para STDIN_URL com body input=<value>"
+    },
+
+    "run.sh": {
+      "path": "run.sh",
+      "role": "Executor backend: valida sudo, lança ação, grava log com marcador de conclusão",
+      "sources": ["common.sh", "backend.sh"],
+      "files": {
+        "LOG":        "/tmp/bbv-action-<app>.log",
+        "STDIN_FIFO": "/tmp/bbv-stdin-<app>.fifo",
+        "PID_FILE":   "/tmp/bbv-pid-<app>"
+      },
+      "flow": [
+        "1. Verifica sudo -v (usa askpass se necessário)",
+        "2. Mantém sudo vivo em background (sleep 40 loop)",
+        "3. stdbuf -oL -eL bash -c 'source backend.sh; <action>_app <app>' <> FIFO 2>&1 | format_output | tee -a LOG",
+        "4. Grava ___DONE_${exit_code}___  no LOG",
+        "5. trap: mata keep-alive sudo, limpa FIFO e PID_FILE"
+      ],
+      "exit_code_capture": "exit_code=${PIPESTATUS[0]} — captura exit code do processo antes do pipe"
+    },
+
+    "confirm.sh": {
+      "path": "confirm.sh",
+      "role": "Tela de confirmação antes de remover um app",
+      "args": "APP CAT",
+      "sources": ["common.sh", "backend.sh"],
+      "buttons": {
+        "confirm": "/execute$./action.sh remove <app> <cat>",
+        "cancel":  "/execute$./category.sh <cat>"
+      }
+    },
+
+    "launcher.sh": {
+      "path": "launcher.sh",
+      "role": "Entry point — valida ambiente e lança bigbashview",
+      "guards": "EUID != 0, APP_DIR existe, bigbashview no PATH",
+      "cmd": "bigbashview --directory $APP_DIR --name 'Arch Setup Manager' --icon icon.svg --size 980x720",
+      "env": "PYTHONPATH=/usr/lib (necessário para BigBashView)"
+    },
+
+    "askpass.sh": {
+      "path": "askpass.sh",
+      "role": "SUDO_ASKPASS handler — abre zenity --password para sudo -A"
+    },
+
+    "launch.sh": {
+      "path": "launch.sh",
+      "role": "Abre URL via xdg-open em background",
+      "args": "URL"
+    },
+
+    "log-tail.sh": {
+      "path": "log-tail.sh",
+      "role": "Serve conteúdo do log a partir de offset em bytes (tail -c)",
+      "args": "APP OFFSET",
+      "output": "bytes do log de /tmp/bbv-action-<app>.log a partir de OFFSET+1"
+    },
+
+    "stdin-relay.sh": {
+      "path": "stdin-relay.sh",
+      "role": "Escreve $input (injetado pelo BBV via POST) no FIFO do processo",
+      "args": "APP",
+      "note": "$input é variável de ambiente injetada pelo BigBashView a partir do corpo do POST"
+    },
+
+    "kill.sh": {
+      "path": "kill.sh",
+      "role": "Mata recursivamente árvore de processos do run.sh (sudo kill -KILL)",
+      "args": "APP",
+      "flow": [
+        "1. Lê PID de /tmp/bbv-pid-<app>",
+        "2. kill_tree() recursivo via pgrep -P",
+        "3. Escreve ___DONE_130___ no LOG para sinalizar interrupção ao JS"
+      ]
+    },
+
+    "fwupd-manage.sh": {
+      "path": "fwupd-manage.sh",
+      "role": "Backend do modal fwupd — retorna HTML com resultado formatado de fwupdmgr",
+      "actions": ["refresh", "get-updates", "update"],
+      "called_by": "fwupd.sh manage_fwupd() → bbv /execute$./fwupd-manage.sh <action>"
+    },
+
+    "ollama-manage.sh": {
+      "path": "ollama-manage.sh",
+      "role": "Backend do modal Ollama — lista/remove modelos e controla serviço",
+      "actions": ["list", "delete <model>", "service-status", "service-start", "service-stop"],
+      "called_by": "categories/ai/ollama.sh manage_ollama() via fetch JS"
+    },
+
+    "waveterm-manage.sh": {
+      "path": "waveterm-manage.sh",
+      "role": "Backend do modal WaveTerm — gerencia waveai.json com configs de modelos Ollama",
+      "config_file": "$HOME/.config/waveterm/waveai.json",
+      "actions": ["list-configs", "list-models", "add <model> [name]", "remove <key>"],
+      "key_format": "ollama-<model> com ':' e '.' substituídos por '-'",
+      "called_by": "categories/ai/waveterm-bin.sh manage_waveterm_bin() via fetch JS"
+    }
+  },
+
+  "app_plugins": {
+    "ai/ollama": {
+      "APP_ID": "ollama", "APP_NAME": "Ollama",
+      "status": "has_cmd ollama",
+      "manage": "Modal com abas: Modelos instalados, Serviço (start/stop), integração waveai.json",
+      "modal_js_fns": ["openOllamaModal", "olmDelete", "olmServiceToggle"]
+    },
+    "ai/open-webui": {
+      "APP_ID": "open-webui", "APP_NAME": "Open WebUI",
+      "status": "has_cmd docker && docker ps | grep open-webui",
+      "launch": "http://localhost:11500",
+      "install": "docker pull ghcr.io/open-webui/open-webui:main + docker run -p 11500:8080 + .desktop file",
+      "remove": "docker stop/rm/rmi + volume rm + .desktop remove"
+    },
+    "ai/waveterm-bin": {
+      "APP_ID": "waveterm-bin", "APP_NAME": "WaveTerm",
+      "manage": "Modal com abas: Configuradas (list-configs), Adicionar (list-models), Manual (add manual)",
+      "modal_js_fns": ["openWavetermModal", "closeWavetermModal", "wtmTab", "wtmLoadConfigs", "wtmLoadModels", "wtmAddModel", "wtmRemoveConfig", "wtmManualAdd"]
+    },
+    "system/fwupd": {
+      "APP_ID": "fwupd", "APP_NAME": "fwupd (Firmware Updates)",
+      "manage": "Modal: botões refresh/get-updates/update com output formatado via fwupd-manage.sh",
+      "modal_js_fns": ["openFwupdModal", "closeFwupdModal", "fwupdRun"],
+      "install": "install_pkg fwupd + systemctl enable fwupd-refresh.timer",
+      "remove": "disable timer/service + remove_pkg fwupd"
+    },
+    "configs/xdg-portal": {
+      "APP_ID": "xdg-portal", "APP_NAME": "XDG Desktop Portal",
+      "type": "config",
+      "config_file": "$HOME/.config/xdg-desktop-portal/portals.conf",
+      "status": "arquivo existe e contém 'default=gtk'",
+      "install": "escreve portals.conf + systemctl --user restart xdg-desktop-portal",
+      "remove": "rm -f portals.conf"
+    }
+  },
+
+  "design_patterns": {
+    "new_category": {
+      "steps": [
+        "1. Criar pasta categories/<id>/",
+        "2. Criar category.sh com CAT_ID, CAT_TITLE, CAT_ICON, CAT_DESC, [CAT_TYPE=app|config]",
+        "3. Criar <app>.sh por app com APP_ID, APP_NAME, APP_DESC + funções opcionais"
+      ]
+    },
+    "new_app": {
+      "min_required": ["APP_ID", "APP_NAME"],
+      "optional_functions": {
+        "status_<norm>()":  "retorna 0 se instalado (default: has_pkg ou has_fpk conforme APP_ID)",
+        "install_<norm>()": "lógica custom de instalação (default: install_pkg/install_fpk)",
+        "remove_<norm>()":  "lógica custom de remoção (default: remove_pkg/uninstall_fpk)",
+        "manage_<norm>(bbv_base)": "imprime onclick_string\\nmodal_html — injeta botão ⚙",
+        "launch_<norm>()":  "imprime URL — injeta botão ↗"
+      }
+    },
+    "modal_pattern": {
+      "description": "manage_<app>() deve imprimir: linha 1 = string JS do onclick, restante = HTML do modal + <script>",
+      "bbv_base_injection": "Passar bbv_base como $1 para construir URLs de fetch dentro do modal",
+      "css_conventions": "Usar variáveis CSS globais de common.sh (--surface, --border, --primary, etc.)",
+      "animation": "transition: transform .2s, opacity .2s — escala de .96 para 1 ao abrir"
+    }
+  },
+
+  "known_issues": {}
+}

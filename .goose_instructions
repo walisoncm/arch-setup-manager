@@ -1,0 +1,9 @@
+# Project Instructions: Arch Setup Manager
+
+This project is the Arch Setup Manager, focused on shell script automation within the CachyOS environment.
+
+## Workflow Guidelines:
+1.  **Script Suggestion:** Before suggesting *any* new script, you **MUST** first check the contents and scope of the `categories/` directory to see if existing functionality covers the required automation.
+2.  **Naming Convention:** All scripts designed to manage or interact with sets of tools/features must strictly adhere to the naming convention: `-manage.sh`.
+
+Adherence to these guidelines ensures consistency, reusability, and proper context awareness for all automation tasks.

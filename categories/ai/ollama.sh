@@ -99,7 +99,9 @@ manage_ollama() {
         <input id="olm-model-input" class="olm-input" type="text"
                placeholder="ex: gemma3:4b  ou  qwen2.5-coder:7b"
                onkeydown="if(event.key==='Enter') olmPull()">
-        <button onclick="olmPull()" class="btn btn-primary btn-sm">⬇ Baixar</button>
+        <button id="olm-pull-btn" onclick="olmPull()" class="btn btn-primary btn-sm">⬇ Baixar</button>
+        <button id="olm-cancel-btn" onclick="olmCancelPull()"
+                class="btn btn-outline btn-sm" style="display:none; color:var(--danger); border-color:rgba(224,108,117,.35);">✕ Cancelar</button>
       </div>
       <div id="olm-pull-status" style="font-size:13px; min-height:20px;"></div>
       <div>
@@ -190,6 +192,22 @@ manage_ollama() {
       .then(function(r) { return r.text(); })
       .then(function(html) { st.innerHTML = html; olmLoadModels(); });
   };
+  var _pullAbort  = null;
+  var _pullReader = null;
+
+  function olmResetPullUI() {
+    document.getElementById('olm-cancel-btn').style.display = 'none';
+    document.getElementById('olm-pull-btn').disabled = false;
+    _pullReader = null;
+    _pullAbort  = null;
+  }
+
+  window.olmCancelPull = function() {
+    if (_pullReader) { _pullReader.cancel(); }
+    if (_pullAbort)  { _pullAbort.abort();   }
+    olmResetPullUI();
+    document.getElementById('olm-pull-status').innerHTML = '<span style="color:var(--muted);">Download cancelado.</span>';
+  };
   window.olmFill = function(name) {
     document.getElementById('olm-model-input').value = name;
     document.getElementById('olm-model-input').focus();
@@ -199,22 +217,27 @@ manage_ollama() {
     var st    = document.getElementById('olm-pull-status');
     if (!model) { st.innerHTML = '<span style="color:var(--danger);">Informe o nome do modelo.</span>'; return; }
 
+    _pullAbort = new AbortController();
     st.innerHTML = '<span style="color:var(--muted);">Conectando ao Ollama...</span>';
+    document.getElementById('olm-cancel-btn').style.display = 'inline-flex';
+    document.getElementById('olm-pull-btn').disabled = true;
 
     fetch('http://localhost:11434/api/pull', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: model, stream: true})
+      body: JSON.stringify({name: model, stream: true}),
+      signal: _pullAbort.signal
     })
     .then(function(r) {
       if (!r.ok) throw new Error('Ollama não responde (status ' + r.status + '). Inicie o serviço primeiro.');
-      var reader  = r.body.getReader();
+      _pullReader = r.body.getReader();
       var decoder = new TextDecoder();
       var buf = '';
       function read() {
-        reader.read().then(function(res) {
+        _pullReader.read().then(function(res) {
           if (res.done) {
             st.innerHTML = '<span style="color:#3ddc84;">✓ <strong>' + model + '</strong> pronto!</span>';
+            olmResetPullUI();
             olmLoadModels();
             return;
           }
@@ -225,7 +248,11 @@ manage_ollama() {
             if (!line.trim()) return;
             try {
               var obj = JSON.parse(line);
-              if (obj.error) { st.innerHTML = '<span style="color:var(--danger);">✗ ' + obj.error + '</span>'; return; }
+              if (obj.error) {
+                st.innerHTML = '<span style="color:var(--danger);">✗ ' + obj.error + '</span>';
+                olmResetPullUI();
+                return;
+              }
               var info = obj.status || '';
               var bar  = '';
               if (obj.total && obj.completed) {
@@ -241,12 +268,16 @@ manage_ollama() {
           });
           read();
         }).catch(function(e) {
+          olmResetPullUI();
+          if (e.name === 'AbortError') return;
           st.innerHTML = '<span style="color:var(--danger);">Conexão perdida: ' + e.message + '</span>';
         });
       }
       read();
     })
     .catch(function(e) {
+      olmResetPullUI();
+      if (e.name === 'AbortError') return;
       st.innerHTML = '<span style="color:var(--danger);">✗ ' + e.message + '</span>';
     });
   };

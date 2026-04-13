@@ -39,7 +39,7 @@ echo "<html><head><style>
 
 # ── VALIDAÇÃO DO SUDO ────────────────────────────────────────────────────────
 echo "<span class='step'>──▸ Verificando privilégios de administrador...</span>" | tee -a "$LOG"
-if ! sudo -v; then
+if ! command sudo -A -v; then
     echo "<span class='err'>[✗] Erro: Senha incorreta ou cancelada.</span>" | tee -a "$LOG"
     echo "___DONE_1___" >> "$LOG"
     echo "</pre></body></html>"
@@ -48,7 +48,7 @@ fi
 echo "<span class='ok'>[+] Autorizado. Iniciando processo...</span>" | tee -a "$LOG"
 
 # Mantém sudo vivo em background
-( while true; do sudo -n true; sleep 40; done ) &
+( while true; do sleep 40; command sudo -n -v 2>/dev/null; done ) &
 KEEP_SUDO_ALIVE_PID=$!
 trap "kill $KEEP_SUDO_ALIVE_PID 2>/dev/null; rm -f '$STDIN_FIFO' '$PID_FILE'" EXIT
 
