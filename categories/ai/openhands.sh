@@ -4,7 +4,7 @@ APP_NAME="OpenHands"
 APP_DESC="Agente de desenvolvimento de software com IA — executa tarefas em sandbox Docker"
 
 OH_IMAGE="ghcr.io/all-hands-ai/openhands:latest"
-OH_RUNTIME="nikolaik/python-nodejs:python3.12-nodejs22"
+OH_BASE_IMAGE="nikolaik/python-nodejs:python3.12-nodejs22"
 OH_CONTAINER="openhands-app"
 OH_STATE="$HOME/.openhands-state"
 
@@ -36,8 +36,8 @@ install_openhands() {
         set -e
         systemctl enable --now docker.service
         usermod -aG docker '${USER}'
-        echo '[+] Baixando runtime...'
-        docker pull '${OH_RUNTIME}'
+        echo '[+] Baixando imagem base do runtime...'
+        docker pull '${OH_BASE_IMAGE}'
         echo '[+] Baixando OpenHands...'
         docker pull '${OH_IMAGE}'
         docker stop '${OH_CONTAINER}' 2>/dev/null || true
@@ -45,7 +45,7 @@ install_openhands() {
         docker run -d \
             --name '${OH_CONTAINER}' \
             --restart always \
-            -e SANDBOX_RUNTIME_CONTAINER_IMAGE='${OH_RUNTIME}' \
+            -e SANDBOX_BASE_CONTAINER_IMAGE='${OH_BASE_IMAGE}' \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v '${OH_STATE}:/.openhands-state' \
             -v '${OH_STATE}/.openhands:/.openhands' \
@@ -382,17 +382,28 @@ SCRIPT
 }
 
 remove_openhands() {
-    step "Removendo container e imagens..."
+    step "Parando e removendo containers..."
     sudo bash -c "
         docker stop '${OH_CONTAINER}' 2>/dev/null || true
         docker rm   '${OH_CONTAINER}' 2>/dev/null || true
-        docker rmi  '${OH_IMAGE}'     2>/dev/null || true
-        docker rmi  '${OH_RUNTIME}'   2>/dev/null || true
+        docker ps -a --format '{{.Names}}' | grep '^openhands-runtime-' \
+            | xargs -r docker rm -f
     "
+
+    step "Removendo imagens..."
+    sudo bash -c "
+        docker rmi '${OH_IMAGE}' 2>/dev/null || true
+        docker rmi '${OH_BASE_IMAGE}' 2>/dev/null || true
+        docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep 'all-hands-ai/runtime' \
+            | xargs -r docker rmi -f
+    "
+
+    step "Removendo estado e dados..."
+    sudo rm -rf "${OH_STATE}"
 
     step "Removendo lançador..."
     rm -f "$HOME/.local/share/applications/openhands.desktop"
 
-    log "OpenHands removido."
-    warn "Estado preservado em ~/.openhands-state/ (remova manualmente se desejar)."
+    log "OpenHands removido por completo."
 }
