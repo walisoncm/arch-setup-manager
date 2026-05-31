@@ -318,6 +318,10 @@ remove_ollama() {
     sudo systemctl disable ollama.service 2>/dev/null || true
 
     # Instalado via pacman/AUR ou via script curl
+    if has_pkg ollama-cuda; then
+        remove_pkg ollama-cuda
+    fi
+
     if has_pkg ollama; then
         remove_pkg ollama
     else

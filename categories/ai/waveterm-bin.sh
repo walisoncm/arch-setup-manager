@@ -58,7 +58,8 @@ manage_waveterm_bin() {
     </div>
     <div class="wtm-tabs">
       <button class="wtm-tab active" onclick="wtmTab('configs')">⚙ Configuradas</button>
-      <button class="wtm-tab"        onclick="wtmTab('add')">➕ Adicionar</button>
+      <button class="wtm-tab"        onclick="wtmTab('add')">➕ Ollama</button>
+      <button class="wtm-tab"        onclick="wtmTab('llama')">🦙 Llama.cpp</button>
       <button class="wtm-tab"        onclick="wtmTab('manual')">✏ Manual</button>
     </div>
 
@@ -74,14 +75,26 @@ manage_waveterm_bin() {
     <!-- Aba: Adicionar (modelos Ollama instalados) -->
     <div id="wtm-pane-add" class="wtm-pane">
       <div class="wtm-hint">
-        Selecione um modelo Ollama instalado para adicioná-lo como IA no WaveTerm.<br>
-        O WaveTerm precisa ser reiniciado para aplicar as mudanças.
+        Selecione um modelo Ollama instalado para adicioná-lo como IA no WaveTerm.
       </div>
       <div id="wtm-model-list" style="font-size:13px; color:var(--muted);">Carregando...</div>
       <div style="flex-shrink:0; padding-top:10px; border-top:1px solid var(--border);">
         <button onclick="wtmLoadModels()" class="btn btn-outline btn-sm">↻ Atualizar</button>
       </div>
       <div id="wtm-add-status" style="font-size:12px; min-height:16px;"></div>
+    </div>
+
+    <!-- Aba: Llama.cpp -->
+    <div id="wtm-pane-llama" class="wtm-pane">
+      <div class="wtm-hint">
+        Selecione um modelo GGUF (Llama.cpp) para usá-lo via servidor local (Porta 8080).<br>
+        <em>Certifique-se de que o servidor Llama.cpp esteja rodando.</em>
+      </div>
+      <div id="wtm-llama-list" style="font-size:13px; color:var(--muted);">Carregando...</div>
+      <div style="flex-shrink:0; padding-top:10px; border-top:1px solid var(--border);">
+        <button onclick="wtmLoadLlama()" class="btn btn-outline btn-sm">↻ Atualizar</button>
+      </div>
+      <div id="wtm-llama-status" style="font-size:12px; min-height:16px;"></div>
     </div>
 
     <!-- Aba: Manual -->
@@ -128,7 +141,7 @@ HTML
     document.body.style.overflow = '';
   };
   window.wtmTab = function(tab) {
-    var tabs  = ['configs', 'add', 'manual'];
+    var tabs  = ['configs', 'add', 'llama', 'manual'];
     document.querySelectorAll('.wtm-tab').forEach(function(b, i) {
       b.classList.toggle('active', tabs[i] === tab);
     });
@@ -136,6 +149,7 @@ HTML
       document.getElementById('wtm-pane-' + t).classList.toggle('active', t === tab);
     });
     if (tab === 'add') wtmLoadModels();
+    if (tab === 'llama') wtmLoadLlama();
   };
 
   window.wtmLoadConfigs = function() {
@@ -156,6 +170,15 @@ HTML
       .catch(function(e) { out.textContent = 'Erro: ' + e; });
   };
 
+  window.wtmLoadLlama = function() {
+    var out = document.getElementById('wtm-llama-list');
+    out.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    fetch(bbv + '/execute\$./waveterm-manage.sh list-llama')
+      .then(function(r) { return r.text(); })
+      .then(function(html) { out.innerHTML = html; })
+      .catch(function(e) { out.textContent = 'Erro: ' + e; });
+  };
+
   window.wtmAddModel = function(model) {
     var st = document.getElementById('wtm-add-status');
     st.innerHTML = '<span style="color:var(--muted);">Adicionando...</span>';
@@ -164,6 +187,17 @@ HTML
       .then(function(html) {
         st.innerHTML = html;
         wtmLoadModels();
+      });
+  };
+
+  window.wtmAddLlama = function(model) {
+    var st = document.getElementById('wtm-llama-status');
+    st.innerHTML = '<span style="color:var(--muted);">Adicionando...</span>';
+    fetch(bbv + '/execute\$./waveterm-manage.sh add-llama ' + encodeURIComponent(model))
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        st.innerHTML = html;
+        wtmLoadLlama();
       });
   };
 

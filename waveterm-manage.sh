@@ -56,34 +56,100 @@ case "$action" in
         # Lista modelos Ollama ainda não configurados no WaveTerm
         ensure_waveai
         all_models=$(ollama list 2>/dev/null | tail -n +2 | awk '{print $1}')
-        if [[ -z "$all_models" ]]; then
-            echo "<div style='color:var(--muted);'>Nenhum modelo Ollama instalado.</div>"
-            exit 0
-        fi
-
+        
         configured=$(jq -r '[.[] | .["ai:model"]] | .[]' "$WAVEAI_JSON" 2>/dev/null)
 
         echo "<div style='display:flex;flex-direction:column;gap:6px;'>"
-        while IFS= read -r model; do
-            [[ -z "$model" ]] && continue
+        if [[ -n "$all_models" ]]; then
+            while IFS= read -r model; do
+                [[ -z "$model" ]] && continue
+                is_cfg=false
+                while IFS= read -r cm; do
+                    [[ "$cm" == "$model" ]] && { is_cfg=true; break; }
+                done <<< "$configured"
+
+                if $is_cfg; then
+                    echo "<div class='wtm-row'>"
+                    echo "  <span style='flex:1;font-family:monospace;font-size:13px;'>$(esc "$model")</span>"
+                    echo "  <span style='font-size:11px;color:#3ddc84;'>✓ já configurado</span>"
+                    echo "</div>"
+                else
+                    echo "<div class='wtm-row'>"
+                    echo "  <span style='flex:1;font-family:monospace;font-size:13px;'>$(esc "$model")</span>"
+                    echo "  <button class='wtm-add' onclick=\"wtmAddModel('$(esc "$model")')\">➕ Adicionar</button>"
+                    echo "</div>"
+                fi
+            done <<< "$all_models"
+        else
+            echo "<div style='color:var(--muted); font-size:12px;'>Nenhum modelo Ollama instalado.</div>"
+        fi
+        echo "</div>"
+        ;;
+
+    list-llama)
+        # Lista modelos GGUF do Llama.cpp
+        ensure_waveai
+        MODELS_DIR="$HOME/.local/share/llama.cpp/models"
+        models=$(find "$MODELS_DIR" -name "*.gguf" -printf "%f\n" | sort)
+        configured_models=$(jq -r '.[] | select(.["ai:apitype"] == "openai-chat" and .["ai:endpoint"] == "http://127.0.0.1:8080/v1/chat/completions") | .["ai:model"]' "$WAVEAI_JSON" 2>/dev/null)
+
+        if [[ -z "$models" ]]; then
+            echo "<div style='color:var(--muted); font-size:12px;'>Nenhum modelo .gguf encontrado em llama.cpp/models.</div>"
+            exit 0
+        fi
+
+        echo "<div style='display:flex;flex-direction:column;gap:6px;'>"
+        while IFS= read -r name; do
+            [[ -z "$name" ]] && continue
             is_cfg=false
             while IFS= read -r cm; do
-                [[ "$cm" == "$model" ]] && { is_cfg=true; break; }
-            done <<< "$configured"
+                [[ "$cm" == "$name" ]] && { is_cfg=true; break; }
+            done <<< "$configured_models"
 
+            echo "<div class='wtm-row'>"
+            echo "  <div style='flex:1;'>"
+                echo "    <div style='font-family:monospace;font-size:12px;'>$(esc "$name")</div>"
+                echo "    <div style='font-size:10px;color:var(--muted);'>Llama.cpp Server (8080)</div>"
+            echo "  </div>"
             if $is_cfg; then
-                echo "<div class='wtm-row'>"
-                echo "  <span style='flex:1;font-family:monospace;font-size:13px;'>$(esc "$model")</span>"
-                echo "  <span style='font-size:11px;color:#3ddc84;'>✓ já configurado</span>"
-                echo "</div>"
+                echo "  <span style='font-size:11px;color:#3ddc84;'>✓ Configurado</span>"
             else
-                echo "<div class='wtm-row'>"
-                echo "  <span style='flex:1;font-family:monospace;font-size:13px;'>$(esc "$model")</span>"
-                echo "  <button class='wtm-add' onclick=\"wtmAddModel('$(esc "$model")')\">➕ Adicionar</button>"
-                echo "</div>"
+                echo "  <button class='wtm-add' onclick=\"wtmAddLlama('$(esc "$name")')\">➕ Adicionar</button>"
             fi
-        done <<< "$all_models"
+            echo "</div>"
+        done <<< "$models"
         echo "</div>"
+        ;;
+
+    add-llama)
+        model="$2"
+        name="${3:-Llama.cpp ($model)}"
+        [[ -z "$model" ]] && { echo "<span style='color:var(--danger);'>Modelo não informado.</span>"; exit 1; }
+        ensure_waveai
+
+        # Chave sanitizada
+        key="llama-${model//./-}"
+        key="${key// /-}"
+
+        max_order=$(jq '[.[] | .["display:order"] // 0] | max // 0' "$WAVEAI_JSON" 2>/dev/null)
+        next_order=$(( max_order + 1 ))
+
+        tmp=$(mktemp)
+        jq --arg key "$key" \
+           --arg name "$name" \
+           --arg model "$model" \
+           --argjson order "$next_order" \
+           '.[$key] = {
+               "display:name": $name,
+               "display:order": $order,
+               "ai:apitype": "openai-chat",
+               "ai:model": $model,
+               "ai:endpoint": "http://127.0.0.1:8080/v1/chat/completions",
+               "ai:apitoken": "not-needed",
+               "ai:capabilities": ["tools"]
+           }' "$WAVEAI_JSON" > "$tmp" && mv "$tmp" "$WAVEAI_JSON"
+
+        echo "<span style='color:#3ddc84;'>✓ <strong>$(esc "$name")</strong> configurado no WaveTerm.</span>"
         ;;
 
     add)
