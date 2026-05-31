@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="claude"
 APP_NAME="Claude Code"
-APP_DESC="CLI oficial da Anthropic para IA no terminal com agentes e edição de código"
+APP_DESC="CLI oficial da Anthropic para IA no terminal"
+APP_TYPE="cli"
 
 status_claude() {
     npm list -g @anthropic-ai/claude-code &>/dev/null 2>&1

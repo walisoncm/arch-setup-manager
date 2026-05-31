@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="openhands"
 APP_NAME="OpenHands"
-APP_DESC="Agente de desenvolvimento de software com IA — executa tarefas em sandbox Docker"
+APP_DESC="Agente de desenvolvimento de software com IA"
+APP_TYPE="agent"
 
 OH_IMAGE="ghcr.io/all-hands-ai/openhands:latest"
 OH_BASE_IMAGE="nikolaik/python-nodejs:python3.12-nodejs22"
@@ -160,6 +161,7 @@ manage_openhands() {
       <button class="ohd-tab active" onclick="ohdTab('anthropic')">Anthropic</button>
       <button class="ohd-tab"        onclick="ohdTab('openai')">OpenAI</button>
       <button class="ohd-tab"        onclick="ohdTab('ollama')">🦙 Ollama</button>
+      <button class="ohd-tab"        onclick="ohdTab('llama')">📦 Llama.cpp</button>
       <button class="ohd-tab"        onclick="ohdTab('groq')">Groq</button>
       <button class="ohd-tab"        onclick="ohdTab('custom')">✏ Custom</button>
     </div>
@@ -221,6 +223,15 @@ manage_openhands() {
       </div>
     </div>
 
+    <!-- Aba: Llama.cpp -->
+    <div id="ohd-pane-llama" class="ohd-pane">
+      <div class="ohd-hint">Usa modelos GGUF da sua pasta compartilhada via Llama.cpp (Porta 8080). Certifique-se de que o servidor Llama.cpp está rodando.</div>
+      <div id="ohd-llama-list" style="font-size:13px; color:var(--muted);">Carregando...</div>
+      <div style="flex-shrink:0; padding-top:8px; border-top:1px solid var(--border);">
+        <button onclick="ohdLoadLlama()" class="btn btn-outline btn-sm">↻ Atualizar</button>
+      </div>
+    </div>
+
     <!-- Aba: Groq -->
     <div id="ohd-pane-groq" class="ohd-pane">
       <div class="ohd-hint">Inferência rápida e gratuita via Groq.</div>
@@ -266,7 +277,7 @@ HTML
 (function() {
   var bbv   = '${bbv_base}';
   var modal = document.getElementById('openhands-modal');
-  var TABS  = ['anthropic','openai','ollama','groq','custom'];
+  var TABS  = ['anthropic','openai','ollama','llama','groq','custom'];
 
   function ohdApplySrvStatus(running) {
     var dot   = document.getElementById('ohd-dot');
@@ -325,6 +336,7 @@ HTML
       document.getElementById('ohd-pane-' + t).classList.toggle('active', t === tab);
     });
     if (tab === 'ollama') ohdLoadOllama();
+    if (tab === 'llama') ohdLoadLlama();
   };
   function ohdLoadCurrent() {
     fetch(bbv + '/execute\$./openhands-manage.sh get-config')
@@ -336,6 +348,14 @@ HTML
     var out = document.getElementById('ohd-ollama-list');
     out.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     fetch(bbv + '/execute\$./openhands-manage.sh list-ollama')
+      .then(function(r) { return r.text(); })
+      .then(function(html) { out.innerHTML = html; })
+      .catch(function(e) { out.textContent = 'Erro: ' + e; });
+  };
+  window.ohdLoadLlama = function() {
+    var out = document.getElementById('ohd-llama-list');
+    out.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    fetch(bbv + '/execute\$./openhands-manage.sh list-llama')
       .then(function(r) { return r.text(); })
       .then(function(html) { out.innerHTML = html; })
       .catch(function(e) { out.textContent = 'Erro: ' + e; });

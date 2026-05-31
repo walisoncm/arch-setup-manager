@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="waveterm-bin"
 APP_NAME="WaveTerm"
-APP_DESC="Terminal nativo com IA que visualiza todo o seu espaço de trabalho"
+APP_DESC="Terminal nativo com IA"
+APP_TYPE="interface"
 
 manage_waveterm_bin() {
     local bbv_base="$1"

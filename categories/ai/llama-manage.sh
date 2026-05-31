@@ -4,7 +4,8 @@
 
 APP_ID="llama-cpp"
 APP_NAME="Llama.cpp"
-APP_DESC="Inferência de LLMs em C/C++ de alta performance — suporte a GGUF, CUDA e Vulkan"
+APP_DESC="Motor de inferência de alta performance (GGUF) via terminal ou API"
+APP_TYPE="service"
 
 # ── Status ────────────────────────────────────────────────────────────────────
 status_llama_cpp() {
@@ -14,6 +15,10 @@ status_llama_cpp() {
     has_pkg "llama.cpp-vulkan" || \
     has_cmd "llama-cli" || \
     has_cmd "llama-server"
+}
+
+launch_llama_cpp() {
+    echo "http://localhost:8080"
 }
 
 # ── Instalação ────────────────────────────────────────────────────────────────
@@ -129,7 +134,8 @@ manage_llama_cpp() {
     <div class="llm-pane">
       <div class="llm-hint">
         Coloque seus modelos <code>.gguf</code> em:<br>
-        <code style="color:var(--primary); font-size:10px;">~/.local/share/llama.cpp/models</code>
+        <code style="color:var(--primary); font-size:10px;">~/.local/share/models/gguf</code><br>
+        <span style="font-size:10px;">(Sincronizado com LM Studio)</span>
       </div>
       
       <div style="font-weight:600; font-size:12px; color:var(--text); margin-bottom:4px;">Modelos GGUF Disponíveis:</div>

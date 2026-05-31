@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="claude-native"
 APP_NAME="Claude (Native)"
-APP_DESC="Claude Code instalado nativamente via installer oficial (sem dependência de Node.js)"
+APP_DESC="Claude Code via installer oficial"
+APP_TYPE="cli"
 
 status_claude_native() {
     [[ -d "$HOME/.local/share/claude" ]] && [[ -x "$HOME/.local/bin/claude" ]]

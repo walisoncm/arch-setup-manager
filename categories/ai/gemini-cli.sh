@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="gemini-cli"
 APP_NAME="Gemini CLI"
-APP_DESC="CLI oficial do Google para usar modelos Gemini no terminal com agentes e edição de código"
+APP_DESC="CLI oficial do Google para IA no terminal"
+APP_TYPE="cli"
 
 status_gemini_cli() {
     npm list -g @google/gemini-cli &>/dev/null 2>&1

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 APP_ID="open-webui"
 APP_NAME="Open WebUI"
-APP_DESC="Interface web para Ollama (chat, modelos, histórico)"
+APP_DESC="Interface web para Ollama"
+APP_TYPE="interface"
+APP_DEP="ollama"
 
 status_open_webui() { has_cmd "docker" && docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^open-webui$"; }
 launch_open_webui() { echo "http://localhost:11500"; }

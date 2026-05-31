@@ -2,6 +2,7 @@
 APP_ID="openclaude"
 APP_NAME="Open Claude"
 APP_DESC="CLI open source para IA no terminal com agentes e edição de código"
+APP_TYPE="cli"
 
 status_openclaude() {
     has_cmd "openclaude" || [[ -x "$HOME/.local/bin/openclaude" ]] || \

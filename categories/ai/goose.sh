@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="goose"
 APP_NAME="Goose"
-APP_DESC="Agente de IA local open-source da Block — suporta Claude, GPT, Ollama e outros"
+APP_DESC="Agente de IA local open-source"
+APP_TYPE="agent"
 
 status_goose() {
     has_cmd "goose" || test -x "$HOME/.local/bin/goose"

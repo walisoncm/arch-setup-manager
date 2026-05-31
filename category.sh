@@ -19,15 +19,16 @@ cat << HTML
   <a href="/execute\$./main.sh" class="btn btn-back">← Voltar</a>
   <span class="nav-title">$icon&nbsp; $title</span>
 </div>
-<div class="section" style="margin-top:16px;">
-  <div class="section-header">$([[ $cat_type == config ]] && echo "Configurações" || echo "Apps disponíveis")</div>
 HTML
 
-manage_htmls=()
-
-for key in "${apps[@]}"; do
+_render_app_row() {
+    local key="$1"
+    local nm ds action_btn manage_btn launch_btn installed dep row_style dep_label
     nm="$(name_app "$key")"
     ds="$(desc_app "$key")"
+    dep="${APP_DEPS[$key]}"
+    row_style=""
+    dep_label=""
 
     if [[ $cat_type == config ]]; then
         if status_app "$key" 2>/dev/null; then
@@ -62,11 +63,20 @@ for key in "${apps[@]}"; do
         fi
     fi
 
+    # Estilo especial para dependências
+    if [[ -n "$dep" ]]; then
+        dep_label="<span style='font-size:10px; color:var(--primary); opacity:0.8; margin-right:6px;'>Requires: ${APP_NAMES[$dep]}</span>"
+        # Só indentamos se o pai estiver no mesmo grupo/tipo (mesma aba)
+        if [[ "${APP_TYPES[$key]}" == "${APP_TYPES[$dep]}" ]]; then
+            row_style="margin-left: 20px; border-left: 2px solid var(--border); padding-left: 15px;"
+        fi
+    fi
+
     cat << HTML
-  <div class="app-row">
+  <div class="app-row" style="$row_style">
     <div class="app-info">
       <div class="app-name">$nm</div>
-      <div class="app-desc">$ds</div>
+      <div class="app-desc">$dep_label$ds</div>
     </div>
     <div class="app-actions">
       $launch_btn
@@ -75,11 +85,87 @@ for key in "${apps[@]}"; do
     </div>
   </div>
 HTML
-done
+}
 
-cat << 'HTML'
+declare -A rendered_apps
+
+_render_tree() {
+    local key="$1"
+    local filter_type="$2"
+    
+    [[ "${rendered_apps[$key]}" == "true" ]] && return
+    
+    local type="${APP_TYPES[$key]}"
+    # No modo 4 abas, filtramos pelo tipo exato
+    [[ "$type" != "$filter_type" ]] && return
+    
+    _render_app_row "$key"
+    rendered_apps[$key]=true
+    
+    # Renderizar filhos (mesmo que sejam de outro tipo, mantemos a hierarquia visual se solicitado)
+    # Mas para o usuário, "Open WebUI" deve estar em Interface mesmo que Ollama esteja em Serviços.
+    # Então na verdade não chamamos recursivo aqui se quisermos abas puras por tipo.
+    # Se o usuário quer separação total, removemos o recursivo de árvore nas abas.
+}
+
+# ─── Renderização com Abas ───────────────────────────────────────────────────
+
+cat << HTML
+<style>
+  .cat-tabs { display: flex; gap: 4px; padding: 0 20px; margin-top: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .cat-tabs::-webkit-scrollbar { display: none; }
+  .cat-tab  { padding: 8px 16px; border-radius: 8px 8px 0 0; border: 1px solid transparent; cursor: pointer;
+               font-size: 13px; background: none; color: var(--muted); transition: all .15s; margin-bottom: -1px; white-space: nowrap; }
+  .cat-tab.active { background: var(--surface); color: var(--primary); border-color: var(--border); border-bottom-color: var(--surface); font-weight: 600; }
+  .cat-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,.05); }
+  .tab-content { display: none; padding-top: 8px; }
+  .tab-content.active { display: block; }
+</style>
+
+<div class="cat-tabs">
+  <button id="tab-btn-interface" class="cat-tab active" onclick="showTab('interface')">🖥 Interface</button>
+  <button id="tab-btn-service"   class="cat-tab" onclick="showTab('service')">⚙ Serviços</button>
+  <button id="tab-btn-cli"       class="cat-tab" onclick="showTab('cli')">⌨ CLI</button>
+  <button id="tab-btn-agent"     class="cat-tab" onclick="showTab('agent')">🤖 Agentes</button>
 </div>
 
+<div id="tab-interface" class="tab-content active"><div class="section">
+HTML
+unset rendered_apps; declare -A rendered_apps
+for key in "${apps[@]}"; do [[ "${APP_TYPES[$key]}" == "interface" ]] && _render_app_row "$key"; done
+cat << HTML
+</div></div>
+
+<div id="tab-service" class="tab-content"><div class="section">
+HTML
+for key in "${apps[@]}"; do [[ "${APP_TYPES[$key]}" == "service" ]] && _render_app_row "$key"; done
+cat << HTML
+</div></div>
+
+<div id="tab-cli" class="tab-content"><div class="section">
+HTML
+for key in "${apps[@]}"; do [[ "${APP_TYPES[$key]}" == "cli" ]] && _render_app_row "$key"; done
+cat << HTML
+</div></div>
+
+<div id="tab-agent" class="tab-content"><div class="section">
+HTML
+for key in "${apps[@]}"; do [[ "${APP_TYPES[$key]}" == "agent" ]] && _render_app_row "$key"; done
+cat << HTML
+</div></div>
+
+<script>
+function showTab(type) {
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  document.getElementById('tab-btn-' + type).classList.add('active');
+  document.getElementById('tab-' + type).classList.add('active');
+}
+</script>
+HTML
+
+cat << 'HTML'
 <style>
 .btn-launch {
     background: none;

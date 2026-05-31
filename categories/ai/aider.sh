@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 APP_ID="aider"
 APP_NAME="Aider"
-APP_DESC="Pair programming com IA no terminal via Git — edita código usando Claude, GPT e outros"
+APP_DESC="Pair programming com IA no terminal"
+APP_TYPE="agent"
 
 status_aider() {
     has_cmd "aider" || test -x "$HOME/.local/bin/aider"

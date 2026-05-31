@@ -3,7 +3,8 @@
 # Pi Code Harness App definition
 APP_ID="pi-harness"
 APP_NAME="Pi (Coding Harness)"
-APP_DESC="Pi is a minimal terminal coding harness."
+APP_DESC="Pi is a minimal terminal coding harness"
+APP_TYPE="agent"
 
 # Default status check is based on package presence
 

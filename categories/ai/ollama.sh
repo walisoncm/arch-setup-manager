@@ -2,6 +2,7 @@
 APP_ID="ollama"
 APP_NAME="Ollama"
 APP_DESC="IA Local com aceleração GPU"
+APP_TYPE="service"
 
 status_ollama() { has_cmd "ollama"; }
 

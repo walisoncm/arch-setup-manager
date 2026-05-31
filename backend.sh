@@ -5,7 +5,7 @@ source "./lib/helpers.sh"
 
 # ─── ARRAYS GLOBAIS ───────────────────────────────────────────────────────────
 declare -A CATS_TITLE CATS_ICON CATS_APPS CATS_DESC CATS_TYPE
-declare -A APP_NAMES APP_DESCS
+declare -A APP_NAMES APP_DESCS APP_TYPES APP_DEPS
 CATEGORIES=()
 
 # ─── CARREGAMENTO DINÂMICO ────────────────────────────────────────────────────
@@ -33,13 +33,16 @@ if [[ -d "$MOD_PATH" ]]; then
                 [[ "$(basename "$app_file")" == "category.sh" ]] && continue
                 [[ -f "$app_file" ]] || continue
 
+                # Limpa variáveis antes de carregar o próximo app para evitar vazamento
+                unset APP_ID APP_NAME APP_DESC APP_TYPE APP_DEP
                 source "$app_file"
 
                 if [[ -n "$APP_ID" ]]; then
                     _cat_apps+=" $APP_ID"
                     APP_NAMES[$APP_ID]="$APP_NAME"
                     APP_DESCS[$APP_ID]="$APP_DESC"
-                    unset APP_ID APP_NAME APP_DESC
+                    APP_TYPES[$APP_ID]="${APP_TYPE:-gui}"
+                    APP_DEPS[$APP_ID]="$APP_DEP"
                 fi
             done
 
