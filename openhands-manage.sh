@@ -18,10 +18,10 @@ _docker() {
 }
 
 OH_IMAGE="ghcr.io/all-hands-ai/openhands:latest"
-OH_RUNTIME="nikolaik/python-nodejs:python3.12-nodejs22"
+OH_RUNTIME="ghcr.io/all-hands-ai/runtime:0.28-nikolaik-python-nodejs-python3.12-nodejs22"
 OH_CONTAINER="openhands-app"
 OH_STATE="$HOME/.openhands-state"
-OH_SETTINGS="$OH_STATE/.openhands/settings.json"
+OH_SETTINGS="$OH_STATE/settings.json"
 
 action="${1:-get-config}"
 
@@ -41,6 +41,9 @@ import json, sys
 try:
     d = json.load(open('$OH_SETTINGS'))
     v = d.get(sys.argv[1])
+    # Tenta buscar dentro de um objeto 'llm' se existir (versões novas)
+    if v is None and 'llm' in d and isinstance(d['llm'], dict):
+        v = d['llm'].get(sys.argv[1])
     if v: print(v)
 except: pass
 " "$1" 2>/dev/null
@@ -56,7 +59,7 @@ import json, sys, os
 path = os.environ.get('OH_SETTINGS', '')
 if not path:
     import pathlib
-    path = str(pathlib.Path.home() / '.openhands-state/.openhands/settings.json')
+    path = str(pathlib.Path.home() / '.openhands-state/settings.json')
 
 try:
     with open(path) as f:
@@ -86,14 +89,12 @@ _container_running() {
 _recreate_container() {
     _docker stop "$OH_CONTAINER" 2>/dev/null || true
     _docker rm   "$OH_CONTAINER" 2>/dev/null || true
-    mkdir -p "$OH_STATE/.openhands"
+    mkdir -p "$OH_STATE"
     _docker run -d \
         --name "$OH_CONTAINER" \
         --restart always \
-        -e SANDBOX_RUNTIME_CONTAINER_IMAGE="$OH_RUNTIME" \
         -v /var/run/docker.sock:/var/run/docker.sock \
-        -v "$OH_STATE:/.openhands-state" \
-        -v "$OH_STATE/.openhands:/.openhands" \
+        -v "$OH_STATE:/.openhands" \
         -p 13000:3000 \
         --add-host host.docker.internal:host-gateway \
         "$OH_IMAGE" 2>/dev/null
@@ -108,7 +109,7 @@ case "$action" in
         ;;
 
     service-start)
-        _recreate_container
+        _recreate_container >/dev/null 2>&1
         sleep 2
         _container_running && echo "running" || echo "error"
         ;;
@@ -139,8 +140,13 @@ case "$action" in
         if [[ "$provider" == "ollama" ]]; then
             OH_SETTINGS="$OH_SETTINGS" settings_update \
                 "llm_model=$model" \
-                "llm_base_url=http://host.docker.internal:11434" \
+                "llm_base_url=http://172.17.0.1:11434" \
                 "llm_api_key=ollama"
+        elif [[ "$provider" == "llama-cpp" ]]; then
+            OH_SETTINGS="$OH_SETTINGS" settings_update \
+                "llm_model=$model" \
+                "llm_base_url=http://172.17.0.1:8080/v1" \
+                "llm_api_key=llama.cpp"
         else
             OH_SETTINGS="$OH_SETTINGS" settings_update \
                 "llm_model=$model" \
@@ -148,6 +154,37 @@ case "$action" in
         fi
 
         echo "<span style='color:#3ddc84;'>✓ LLM: <code>$(esc "$model")</code> &nbsp; Recarregue o OpenHands para aplicar.</span>"
+        ;;
+
+    list-llama)
+        # Lista modelos da pasta compartilhada
+        MODELS_DIR="$HOME/.local/share/models/gguf"
+        models=$(find "$MODELS_DIR" -name "*.gguf" -printf "%P\n" | sort)
+        if [[ -z "$models" ]]; then
+            echo "<div style='color:var(--muted); font-size:13px;'>Nenhum modelo GGUF encontrado em:<br><code style='font-size:11px;'>$MODELS_DIR</code></div>"
+            exit 0
+        fi
+        current_model=$(settings_get "llm_model")
+        echo "<div style='display:flex;flex-direction:column;gap:6px;'>"
+        while IFS= read -r rel_path; do
+            [[ -z "$rel_path" ]] && continue
+            name=$(basename "$rel_path")
+            oh_model="openai/$rel_path"
+            active=""
+            [[ "$oh_model" == "$current_model" ]] && active="style='border-color:var(--primary);'"
+            
+            size=$(du -h "$MODELS_DIR/$rel_path" | awk '{print $1}')
+
+            echo "<div class='ohd-row' $active>"
+            echo "  <span style='flex:1;font-family:monospace;font-size:13px;'>$(esc "$rel_path") <span style='color:var(--muted);font-size:11px;'>(${size})</span></span>"
+            if [[ "$oh_model" == "$current_model" ]]; then
+                echo "  <span style='font-size:11px; color:var(--primary); padding:3px 8px;'>✓ Ativo</span>"
+            else
+                echo "  <button class='ohd-sel' onclick=\"ohdSetLLM('llama-cpp', '$(esc "$oh_model")')\">✓ Usar</button>"
+            fi
+            echo "</div>"
+        done <<< "$models"
+        echo "</div>"
         ;;
 
     set-key)
