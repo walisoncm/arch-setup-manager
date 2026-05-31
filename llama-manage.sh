@@ -4,9 +4,16 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 export SUDO_ASKPASS="$SCRIPT_DIR/askpass.sh"
 
-# Diretório padrão para modelos GGUF
-MODELS_DIR="$HOME/.local/share/llama.cpp/models"
+# Diretório padrão para modelos GGUF (Compartilhado com LM Studio)
+MODELS_DIR="$HOME/.local/share/models/gguf"
 mkdir -p "$MODELS_DIR"
+
+# Garante compatibilidade com LM Studio (symlink se necessário)
+LM_STUDIO_DIR="$HOME/.cache/lm-studio/models"
+if [[ ! -L "$LM_STUDIO_DIR" && ! -d "$LM_STUDIO_DIR" ]]; then
+    mkdir -p "$(dirname "$LM_STUDIO_DIR")"
+    ln -s "$MODELS_DIR" "$LM_STUDIO_DIR"
+fi
 
 # Arquivo para salvar o modelo "ativo" (usado para iniciar o server)
 CONFIG_DIR="$HOME/.config/llama.cpp"
@@ -24,7 +31,8 @@ esc() {
 case "$action" in
 
     list)
-        models=$(find "$MODELS_DIR" -name "*.gguf" -printf "%f\n" | sort)
+        # Busca recursiva para suportar estrutura do LM Studio (publisher/model/file.gguf)
+        models=$(find "$MODELS_DIR" -name "*.gguf" -printf "%P\n" | sort)
         active_model=$(cat "$ACTIVE_MODEL_FILE" 2>/dev/null)
 
         if [[ -z "$models" ]]; then
@@ -33,23 +41,24 @@ case "$action" in
         fi
 
         echo "<div style='display:flex;flex-direction:column;gap:6px;'>"
-        while IFS= read -r name; do
-            [[ -z "$name" ]] && continue
-            is_active=""
-            [[ "$name" == "$active_model" ]] && is_active="active"
+        while IFS= read -r rel_path; do
+            [[ -z "$rel_path" ]] && continue
             
-            size=$(du -h "$MODELS_DIR/$name" | awk '{print $1}')
+            size=$(du -h "$MODELS_DIR/$rel_path" | awk '{print $1}')
+            name=$(basename "$rel_path")
+            # Para exibição, se estiver em subpasta, mostra o caminho resumido
+            display_name="$rel_path"
             
-            echo "<div class='olm-row $( [[ "$name" == "$active_model" ]] && echo "selected-model" )' style='padding:10px;'>"
-            echo "  <div style='flex:1; cursor:pointer;' onclick=\"llmSetActive('$(esc "$name")')\">"
-            echo "    <div style='font-family:monospace;font-size:13px;'>$(esc "$name")</div>"
+            echo "<div class='olm-row $( [[ "$rel_path" == "$active_model" ]] && echo "selected-model" )' style='padding:10px;'>"
+            echo "  <div style='flex:1; cursor:pointer;' onclick=\"llmSetActive('$(esc "$rel_path")')\">"
+            echo "    <div style='font-family:monospace;font-size:13px;'>$(esc "$display_name")</div>"
             echo "    <div style='color:var(--muted);font-size:10px;'>Tamanho: ${size}</div>"
             echo "  </div>"
             echo "  <div style='display:flex; gap:6px;'>"
-            if [[ "$name" == "$active_model" ]]; then
+            if [[ "$rel_path" == "$active_model" ]]; then
                 echo "    <span style='color:var(--primary); font-size:11px; font-weight:bold; align-self:center; margin-right:8px;'>ATIVO</span>"
             fi
-            echo "    <button class='olm-del' onclick=\"llmDelete('$(esc "$name")')\">🗑</button>"
+            echo "    <button class='olm-del' onclick=\"llmDelete('$(esc "$rel_path")')\">🗑</button>"
             echo "  </div>"
             echo "</div>"
         done <<< "$models"
@@ -89,8 +98,8 @@ case "$action" in
         fi
         
         # Inicia o server em background usando nohup para persistir
-        # Usa porta 8080 padrão do llama.cpp
-        nohup llama-server -m "$MODELS_DIR/$model" --port 8080 > /tmp/llama-server.log 2>&1 &
+        # Usa porta 8080 padrão do llama.cpp e vincula a 0.0.0.0 para acesso Docker
+        nohup llama-server -m "$MODELS_DIR/$model" --port 8080 --host 0.0.0.0 > /tmp/llama-server.log 2>&1 &
         sleep 2
         
         if pgrep -x "llama-server" > /dev/null; then
@@ -128,7 +137,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/bash -c 'ACTIVE_MODEL=\$(cat %h/.config/llama.cpp/active_model 2>/dev/null); [ -z "\$ACTIVE_MODEL" ] && { echo "Nenhum modelo selecionado"; exit 1; }; exec llama-server -m %h/.local/share/llama.cpp/models/\$ACTIVE_MODEL --port 8080'
+ExecStart=/usr/bin/bash -c 'ACTIVE_MODEL=\$(cat %h/.config/llama.cpp/active_model 2>/dev/null); [ -z "\$ACTIVE_MODEL" ] && { echo "Nenhum modelo selecionado"; exit 1; }; exec llama-server -m %h/.local/share/models/gguf/\$ACTIVE_MODEL --port 8080 --host 0.0.0.0'
 Restart=on-failure
 
 [Install]
