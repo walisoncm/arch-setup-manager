@@ -100,7 +100,8 @@ case "$action" in
         # Inicia o server em background usando nohup para persistir
         # -ngl 99: Força o uso total da GPU
         # --flash-attn on: Otimiza performance e economiza VRAM de contexto
-        nohup llama-server -m "$MODELS_DIR/$model" --port 8080 --host 0.0.0.0 --ctx-size 16384 -ngl 99 --flash-attn on > /tmp/llama-server.log 2>&1 &
+        # --embedding: Necessário para ferramentas como OpenHands
+        nohup llama-server -m "$MODELS_DIR/$model" --port 8080 --host 0.0.0.0 --ctx-size 16384 -ngl 99 --flash-attn on --embedding > /tmp/llama-server.log 2>&1 &
         sleep 2
         
         if pgrep -x "llama-server" > /dev/null; then
@@ -138,7 +139,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/bash -c 'ACTIVE_MODEL=\$(cat %h/.config/llama.cpp/active_model 2>/dev/null); [ -z "\$ACTIVE_MODEL" ] && { echo "Nenhum modelo selecionado"; exit 1; }; exec llama-server -m %h/.local/share/models/gguf/\$ACTIVE_MODEL --port 8080 --host 0.0.0.0 --ctx-size 16384 -ngl 99 --flash-attn on'
+ExecStart=/usr/bin/bash -c 'ACTIVE_MODEL=\$(cat %h/.config/llama.cpp/active_model 2>/dev/null); [ -z "\$ACTIVE_MODEL" ] && { echo "Nenhum modelo selecionado"; exit 1; }; exec llama-server -m %h/.local/share/models/gguf/\$ACTIVE_MODEL --port 8080 --host 0.0.0.0 --ctx-size 16384 -ngl 99 --flash-attn on --embedding'
 Restart=on-failure
 
 [Install]
