@@ -108,8 +108,15 @@ _render_tree() {
     # Se o usuário quer separação total, removemos o recursivo de árvore nas abas.
 }
 
-# ─── Renderização com Abas ───────────────────────────────────────────────────
+# ─── Renderização ─────────────────────────────────────────────────────────────
+# A UI de abas (Interface/Serviços/CLI/Agentes) só faz sentido para categorias
+# cujos apps declaram APP_TYPE granular (hoje, só "ai"). Nas demais, os apps
+# ficam com o APP_TYPE padrão ("gui") e nunca bateriam com nenhuma aba, então
+# usamos uma lista simples.
 
+manage_htmls=()
+
+if [[ "$cat" == "ai" ]]; then
 cat << HTML
 <style>
   .cat-tabs { display: flex; gap: 4px; padding: 0 20px; margin-top: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
@@ -158,12 +165,22 @@ cat << HTML
 function showTab(type) {
   document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  
+
   document.getElementById('tab-btn-' + type).classList.add('active');
   document.getElementById('tab-' + type).classList.add('active');
 }
 </script>
 HTML
+else
+cat << HTML
+<div class="section" style="margin-top:16px;">
+  <div class="section-header">$([[ $cat_type == config ]] && echo "Configurações" || echo "Apps disponíveis")</div>
+HTML
+for key in "${apps[@]}"; do _render_app_row "$key"; done
+cat << HTML
+</div>
+HTML
+fi
 
 cat << 'HTML'
 <style>
