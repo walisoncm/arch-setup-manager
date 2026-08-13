@@ -110,7 +110,14 @@ case "$action" in
 
     service-start)
         _recreate_container >/dev/null 2>&1
-        sleep 2
+        sleep 5
+        if _container_running; then
+            # Apply security_risk patch for local models (Gemma, etc)
+            _docker exec "$OH_CONTAINER" bash -c "sed -i \"s/, 'security_risk'//g\" /app/openhands/agenthub/codeact_agent/tools/*.py && sed -i \"s/'security_risk', //g\" /app/openhands/agenthub/codeact_agent/tools/*.py" >/dev/null 2>&1
+            _docker exec "$OH_CONTAINER" bash -c "echo '' > /app/openhands/agenthub/codeact_agent/prompts/security_risk_assessment.j2" >/dev/null 2>&1
+            _docker restart "$OH_CONTAINER" >/dev/null 2>&1
+            sleep 2
+        fi
         _container_running && echo "running" || echo "error"
         ;;
 
